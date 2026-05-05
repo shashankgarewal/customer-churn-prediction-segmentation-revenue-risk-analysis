@@ -1,7 +1,12 @@
 import pandas as pd
 import numpy as np
+import yaml
+import os
 import great_expectations as gx
 import great_expectations.expectations as gxe
+
+from src.utils import logger, exception
+
 
 def validate_data(df: pd.DataFrame):
     """This function implements critical data quality checks that must pass before model training.
@@ -11,8 +16,43 @@ def validate_data(df: pd.DataFrame):
     Args:
         df (pd.DataFrame): raw dataframe
     """
+
+    # ----------------------------------------- inital setup ----------------------------------------- #
+    ## connect pandas df in gx
+    context = gx.get_context()
+    data_source = context.data_sources.add_pandas("pandas")
+    data_asset = data_source.add_dataframe_asset(name="data asset")
+    batch_definition = data_asset.add_batch_definition_whole_dataframe("batch definition")
+    batch = batch_definition.get_batch(batch_parameters={"dataframe": df})
     
-    # -------------------- govern by data-validation notebook -------------------- #
+    ## load config
+    config_path = '/config/production.yaml'
+    try:
+        with open(config_path, 'r') as prod:
+            config = yaml.safe_load(prod)
+    except FileNotFoundError:
+        config = {}
+    except Exception as e:
+        raise e
+    
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    with (config_path, 'w') as prod:
+        config = {'data': {'columns': df.columns.to_list()}}
+        yaml.safe_dump(config, prod, default_flow_style=False)
+
+    columns = config.get('data', {}).get('columns', [])
+        
+    
+    # -------------------------------- column presence and order check ------------------------------- #
+    for col in columns: 
+        order_result = gxe.ExpectColumnToExist(column=col)
+        if not order_result.success:
+            logger.warning("SCHEMA_MISMATCH: Column order does not match the production.yaml definition.")
+            df[col] = 0
+            
+    df = df.reindex(columns=columns)
+    
+    # ------------------------------ govern by data-validation notebook ------------------------------ #
     ## dropped early, not worth intervene even if churn. 
     ## ltv case (no purchase and no value), and age case (tiny set and no signal)
     invalid_mask = (
@@ -33,12 +73,6 @@ def validate_data(df: pd.DataFrame):
     
     # ----------- unobserved invalid cases not observed in known data. ----------- #
     
-    ## connect pandas df in gx
-    context = gx.get_context()
-    data_source = context.data_sources.add_pandas("pandas")
-    data_asset = data_source.add_dataframe_asset(name="data asset")
-    batch_definition = data_asset.add_batch_definition_whole_dataframe("batch definition")
-    batch = batch_definition.get_batch(batch_parameters={"dataframe": df})
 
     
     
