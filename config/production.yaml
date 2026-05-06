@@ -1,0 +1,31 @@
+raw_data:
+  path: "data/raw/ecommerce_customer_churn_dataset.csv"
+  columns:
+  - Age
+  - Gender
+  - Country
+  - City
+  - Membership_Years
+  - Login_Frequency
+  - Session_Duration_Avg
+  - Pages_Per_Session
+  - Cart_Abandonment_Rate
+  - Wishlist_Items
+  - Total_Purchases
+  - Average_Order_Value
+  - Days_Since_Last_Purchase
+  - Discount_Usage_Rate
+  - Returns_Rate
+  - Email_Open_Rate
+  - Customer_Service_Calls
+  - Product_Reviews_Written
+  - Social_Media_Engagement_Score
+  - Mobile_App_Usage
+  - Payment_Method_Diversity
+  - Lifetime_Value
+  - Credit_Balance
+  - Signup_Quarter
+  - Churned
+
+processed_data:
+  path: 
