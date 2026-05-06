@@ -8,8 +8,9 @@ import great_expectations as gx
 import great_expectations.expectations as gxe
 
 from src.utils import logger, exception
+from src.utils.common import get_project_root
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = get_project_root()
 CONFIG_PATH = PROJECT_ROOT / "config" / "production.yaml"
 
 def _get_df_columns(df: pd.DataFrame) -> list[str]:
@@ -52,7 +53,7 @@ def validate_data(df: pd.DataFrame) -> pd.DataFrame:
     ## connect pandas df in gx
     batch = gx.get_context().data_sources.pandas_default.read_dataframe(df)
     
-    columns = _get_df_columns()
+    columns = _get_df_columns(df)
     
     # -------------------------------- column presence and order check ------------------------------- #
     for col in columns: 
@@ -66,7 +67,7 @@ def validate_data(df: pd.DataFrame) -> pd.DataFrame:
             
     df = df.reindex(columns=columns).copy()
 
-    # ------------------------------ govern by data-validation notebook ------------------------------ #
+    # ------------------------ data validation cases identified in known data ------------------------ #
     ## dropped early, not worth intervene even if churn. 
     ## ltv case (no purchase and no value), and age case (tiny set and no signal)
     invalid_mask = (
@@ -76,16 +77,16 @@ def validate_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df[~invalid_mask]
  
     ## flag invalid - reasonable size to keep with flag for pattern
-    invalid_flag_rules = {
+    flag_rules = {
         'Flag_Purchases_Invalid': df['Total_Purchases'].lt(0),
         'Flag_Discount_Rate_Invalid': df['Discount_Usage_Rate'].gt(100),
         'Flag_Membership_Age_Invalid': df['Membership_Years'].gt(df['Age']),
     }
 
-    for flag_col, condition in invalid_flag_rules.items():
+    for flag_col, condition in flag_rules.items():
         df[flag_col] = condition.fillna(False).astype('uint8')
     
-    # ------------------------------ range check not observed in dataset ----------------------------- #
+    # ------------------------ validation range check not observed in dataset ------------------------ #
     gx_expectations = [
         gxe.ExpectColumnValuesToBeBetween(column="Membership_Years", min_value=0),
         gxe.ExpectColumnValuesToBeBetween(column="Days_Since_Last_Purchase", min_value=0),
@@ -113,5 +114,3 @@ def validate_data(df: pd.DataFrame) -> pd.DataFrame:
 
     logger.logging.info("DATA_VALIDATION_COMPLETED: validation finished with shape %s.", df.shape)
     return df
-
-    
