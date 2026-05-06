@@ -1,14 +1,45 @@
 import pandas as pd
 import numpy as np
 import yaml
-import os
+import sys
+from pathlib import Path
+
 import great_expectations as gx
 import great_expectations.expectations as gxe
 
 from src.utils import logger, exception
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CONFIG_PATH = PROJECT_ROOT / "config" / "production.yaml"
 
-def validate_data(df: pd.DataFrame):
+def _get_df_columns(df: pd.DataFrame) -> list[str]:
+    """Load config, or save config with columns if not present. Return columns in df as list."""
+    try:
+        with CONFIG_PATH.open("r", encoding="utf-8") as prod:
+            config = yaml.safe_load(prod) or {}
+    except FileNotFoundError:
+        config = {}
+        logger.logging.warning(
+            "CONFIG_MISSING: %s not found. Current dataframe columns will be used.",
+            CONFIG_PATH,
+        )
+
+    columns = config.get("raw_data", {}).get("columns", [])
+
+    if not columns:
+        columns = df.columns.to_list()
+        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with CONFIG_PATH.open("w", encoding="utf-8") as prod:
+            yaml.safe_dump(
+                {"raw_data": {"columns": columns}},
+                prod,
+                default_flow_style=False,
+                sort_keys=False,
+            )
+            
+    return columns
+    
+def validate_data(df: pd.DataFrame) -> pd.DataFrame:
     """This function implements critical data quality checks that must pass before model training.
     It validates data integrity, business logic constraints, and statistical properties
     that the ML model expects.
@@ -19,39 +50,22 @@ def validate_data(df: pd.DataFrame):
 
     # ----------------------------------------- inital setup ----------------------------------------- #
     ## connect pandas df in gx
-    context = gx.get_context()
-    data_source = context.data_sources.add_pandas("pandas")
-    data_asset = data_source.add_dataframe_asset(name="data asset")
-    batch_definition = data_asset.add_batch_definition_whole_dataframe("batch definition")
-    batch = batch_definition.get_batch(batch_parameters={"dataframe": df})
+    batch = gx.get_context().data_sources.pandas_default.read_dataframe(df)
     
-    ## load config
-    config_path = '/config/production.yaml'
-    try:
-        with open(config_path, 'r') as prod:
-            config = yaml.safe_load(prod)
-    except FileNotFoundError:
-        config = {}
-    except Exception as e:
-        raise e
-    
-    os.makedirs(os.path.dirname(config_path), exist_ok=True)
-    with (config_path, 'w') as prod:
-        config = {'data': {'columns': df.columns.to_list()}}
-        yaml.safe_dump(config, prod, default_flow_style=False)
-
-    columns = config.get('data', {}).get('columns', [])
-        
+    columns = _get_df_columns()
     
     # -------------------------------- column presence and order check ------------------------------- #
     for col in columns: 
         order_result = gxe.ExpectColumnToExist(column=col)
         if not order_result.success:
-            logger.warning("SCHEMA_MISMATCH: Column order does not match the production.yaml definition.")
-            df[col] = 0
+            logger.logging.warning(
+                "SCHEMA_MISMATCH: missing column '%s' created with null values.", 
+                col
+            )
+            df[col] = np.nan
             
-    df = df.reindex(columns=columns)
-    
+    df = df.reindex(columns=columns).copy()
+
     # ------------------------------ govern by data-validation notebook ------------------------------ #
     ## dropped early, not worth intervene even if churn. 
     ## ltv case (no purchase and no value), and age case (tiny set and no signal)
@@ -71,8 +85,33 @@ def validate_data(df: pd.DataFrame):
     for flag_col, condition in invalid_flag_rules.items():
         df[flag_col] = condition.fillna(False).astype('uint8')
     
-    # ----------- unobserved invalid cases not observed in known data. ----------- #
-    
+    # ------------------------------ range check not observed in dataset ----------------------------- #
+    gx_expectations = [
+        gxe.ExpectColumnValuesToBeBetween(column="Membership_Years", min_value=0),
+        gxe.ExpectColumnValuesToBeBetween(column="Days_Since_Last_Purchase", min_value=0),
+        gxe.ExpectColumnValuesToBeBetween(column="Wishlist_Items", min_value=0),
+        gxe.ExpectColumnValuesToBeBetween(column="Customer_Service_Calls", min_value=0),
+        gxe.ExpectColumnValuesToBeBetween(column="Product_Reviews_Written", min_value=0),
+        gxe.ExpectColumnValuesToBeBetween(column="Cart_Abandonment_Rate", min_value=0, max_value=100),
+        gxe.ExpectColumnValuesToBeBetween(column="Returns_Rate", min_value=0, max_value=100),
+        gxe.ExpectColumnValuesToBeBetween(column="Email_Open_Rate", min_value=0, max_value=100),
+        gxe.ExpectColumnValuesToBeBetween(column="Social_Media_Engagement_Score", min_value=0, max_value=100),
+        gxe.ExpectColumnValuesToBeInSet(column="Signup_Quarter", value_set=["Q1", "Q2", "Q3", "Q4"]),
+        gxe.ExpectColumnValuesToBeInSet(column="Churned", value_set=[0, 1]),
+    ]
 
-    
+    for gx_expectation in gx_expectations:
+        result = batch.validate(gx_expectation)
+        if not result.success:
+            logger.logging.warning(
+                "GX_VALIDATION_FAILED: %s failed for '%s' (unexpected_count=%s, sample=%s)",
+                result.expectation_config.type,
+                result.expectation_config.kwargs.get("column", "unknown"),
+                result.result.get("unexpected_count", 0),
+                result.result.get("partial_unexpected_list", []),
+            )
+
+    logger.logging.info("DATA_VALIDATION_COMPLETED: validation finished with shape %s.", df.shape)
+    return df
+
     
