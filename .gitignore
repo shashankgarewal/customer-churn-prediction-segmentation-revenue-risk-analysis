@@ -11,5 +11,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 
-# local packages
+# local packages and artifacts
 *.egg
+logs/
+mlflow/artifacts/

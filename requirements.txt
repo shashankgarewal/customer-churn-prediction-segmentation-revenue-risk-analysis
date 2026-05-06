@@ -3,3 +3,7 @@ numpy
 matplotlib
 seaborn
 scikit-learn
+ydata-profiling
+mlflow
+xgboost
+great_expectations
