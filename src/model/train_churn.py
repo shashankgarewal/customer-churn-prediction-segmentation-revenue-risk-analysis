@@ -73,6 +73,9 @@ def _tune_model(model_name, X, y):
                     "random_state": RANDOM_STATE
                 }
                 model = HistGradientBoostingClassifier(**params)
+            case _:
+                raise ValueError(f"Unsupported model for tuning: {model_name}")
+
                 
         scores = cross_val_score(model, X, y, cv=3, scoring="recall", n_jobs=-1)
         return scores.mean()
@@ -168,13 +171,16 @@ def build_model(
             
             # 3. Log model metrics
             y_pred = final_model.predict(X_test)
-            y_prob = final_model.predict_proba(X_test)
+            y_prob = final_model.predict_proba(X_test)[:, 1]
             
-            mlflow.log_metric("recall", recall_score(y_test, y_pred))
-            mlflow.log_metric("avg_precision", average_precision_score(y_test, y_pred))
-            mlflow.log_metric("roc-auc", roc_auc_score(y_test, y_prob))
-            mlflow.log_metric("accuracy", accuracy_score(y_test, y_prob))
-            _evaluate_model(final_model, X_test, y_test)
+            metrics = {
+                "recall": recall_score(y_test, y_pred),
+                "avg_precision": average_precision_score(y_test, y_prob),
+                "auc_roc": roc_auc_score(y_test, y_prob),
+                "accuracy": accuracy_score(y_test, y_pred),
+            }
+            mlflow.log_metrics(metrics)
+            _evaluate_model(final_model, X_test, y_test, y_pred)
             
             # 4. Log best model and params
             mlflow.log_params(study.best_params)
