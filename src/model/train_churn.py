@@ -130,9 +130,13 @@ def build_model(
 ):
     """Construct and track model tuning experiments."""
     experiment_name = "churn-training-pipeline"
-    project_root = get_project_root()
-    artifact_root = f"file://{project_root}/mlflow/experiment_logs"
-    tracking_db = f"sqlite:///{project_root}/mlflow/tracking.db"
+    project_root = Path(get_project_root())
+    
+    mlflow_dir = project_root / "mlflow"
+    mlflow_dir.mkdir(exist_ok=True)
+    
+    artifact_root = (mlflow_dir / "experiment_logs").as_uri()
+    tracking_db = f"sqlite:///{(mlflow_dir / 'tracking.db').as_posix()}"
 
     mlflow.set_tracking_uri(tracking_db)
 
@@ -161,12 +165,14 @@ def build_model(
             study.optimize(_tune_model(model_name, X_train, y_train), n_trials=15)
             
             # 2. Collect and Train model with Best Params
+            best_params = study.best_params.copy()
             match model_name:
-                case "randomforest": final_model = RandomForestClassifier(**study.best_params)
-                case "xgboost": final_model = XGBClassifier(**study.best_params)
-                case "hgboost": final_model = HistGradientBoostingClassifier(**study.best_params)
-                case "catboost": final_model = CatBoostClassifier(**study.best_params, verbose=False)
-                case "lightgbm": final_model = LGBMClassifier(**study.best_params)
+                case "randomforest": final_model = RandomForestClassifier(**best_params, random_state=RANDOM_STATE, n_jobs=-1)
+                case "xgboost": final_model = XGBClassifier(**best_params, random_state=RANDOM_STATE)
+                case "hgboost": final_model = HistGradientBoostingClassifier(**best_params, random_state=RANDOM_STATE)
+                case "catboost": final_model = CatBoostClassifier(**best_params, random_seed=RANDOM_STATE, verbose=False)
+                case "lightgbm": final_model = LGBMClassifier(**best_params, random_state=RANDOM_STATE)
+                case _: raise ValueError(f"Unsupported model: {model_name}")
             final_model.fit(X_train, y_train)
             
             # 3. Log model metrics
