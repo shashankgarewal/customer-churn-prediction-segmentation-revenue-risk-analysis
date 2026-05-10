@@ -57,8 +57,8 @@ def validate_data(df: pd.DataFrame) -> pd.DataFrame:
     
     # -------------------------------- column presence and order check ------------------------------- #
     for col in columns: 
-        order_result = gxe.ExpectColumnToExist(column=col)
-        if not order_result.success:
+        result = batch.validate(gxe.ExpectColumnToExist(column=col))
+        if not result.success:
             logger.logging.warning(
                 "SCHEMA_MISMATCH: missing column '%s' created with null values.", 
                 col
