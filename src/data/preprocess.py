@@ -28,6 +28,8 @@ def prepare_dataset(df: pd.DataFrame):
         )
     
     # ---------------------------------- save train and test dataset --------------------------------- #
+    PREPROCESS_DATA_PATH.mkdir(parents=True, exist_ok=True)
+    
     train_path = PREPROCESS_DATA_PATH / "train.parquet"
     test_path = PREPROCESS_DATA_PATH / "test.parquet"
     
