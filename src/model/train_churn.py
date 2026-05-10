@@ -51,7 +51,8 @@ def _tune_model(model_name, X, y):
                     "depth": trial.suggest_int("depth", 4, 10),
                     "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1, 10),
                     "random_seed": RANDOM_STATE,
-                    "verbose": False
+                    "verbose": False,
+                    "allow_writing_files": False
                 }
                 model = CatBoostClassifier(**params)
 
@@ -126,7 +127,8 @@ def build_model(
     train_df: pd.DataFrame, 
     test_df: pd.DataFrame,
     target: str = "Churned", 
-    models: list[str] | None = None
+    models: list[str] | None = None,
+    n_trials: int = 15
 ):
     """Construct and track model tuning experiments."""
     experiment_name = "churn-training-pipeline"
@@ -162,15 +164,27 @@ def build_model(
             # 1. Hyperparameter Tuning with bayesian optimization
             logging.info(f"MODEL_TRAIN: Tuning {model_name}")
             study = optuna.create_study(direction="maximize")
-            study.optimize(_tune_model(model_name, X_train, y_train), n_trials=15)
+            study.optimize(_tune_model(model_name, X_train, y_train), n_trials=n_trials)
             
+            try:
+                fig_hist = optuna.visualization.plot_optimization_history(study)
+                fig_slice = optuna.visualization.plot_slice(study)
+                
+                # Log to MLflow as interactive HTML artifacts
+                mlflow.log_figure(fig_hist, f"plots/{model_name}_optimization_history.html")
+                mlflow.log_figure(fig_slice, f"plots/{model_name}_slice_plot.html")
+                
+                logging.info(f"MODEL_TRAIN: log historic trials plot for {model_name} study")
+            except Exception as e:
+                logging.warning(f"MODEL_TRAIN: failed to generate plots: {e}")
+                
             # 2. Collect and Train model with Best Params
             best_params = study.best_params.copy()
             match model_name:
                 case "randomforest": final_model = RandomForestClassifier(**best_params, random_state=RANDOM_STATE, n_jobs=-1)
                 case "xgboost": final_model = XGBClassifier(**best_params, random_state=RANDOM_STATE)
                 case "hgboost": final_model = HistGradientBoostingClassifier(**best_params, random_state=RANDOM_STATE)
-                case "catboost": final_model = CatBoostClassifier(**best_params, random_seed=RANDOM_STATE, verbose=False)
+                case "catboost": final_model = CatBoostClassifier(**best_params, random_seed=RANDOM_STATE, verbose=False, allow_writing_files=False)
                 case "lightgbm": final_model = LGBMClassifier(**best_params, random_state=RANDOM_STATE)
                 case _: raise ValueError(f"Unsupported model: {model_name}")
             final_model.fit(X_train, y_train)
@@ -189,5 +203,5 @@ def build_model(
             _evaluate_model(final_model, X_test, y_test, y_pred)
             
             # 4. Log best model and params
-            mlflow.log_params(study.best_params)
+            mlflow.log_params(best_params)
             mlflow.sklearn.log_model(final_model, artifact_path="model")
