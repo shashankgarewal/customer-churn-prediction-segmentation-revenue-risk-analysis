@@ -16,6 +16,7 @@ import mlflow
 
 from src.utils.common import get_project_root
 from src.utils.logger import logging
+from src.model.evaluate_churn import evaluate_model
 
 RANDOM_STATE = 42 
 
@@ -85,45 +86,6 @@ def _tune_model(model_name, X, y):
         return scores.mean()
     
     return objective
-
-
-# ------------------------------- evaluate model and log in mlflow ------------------------------- #
-def _evaluate_model(model, X_test, y_test, y_pred):
-    """Evaluate and log model metrics across ltv segments in mlflow"""
-    
-    y_prob = model.predict_proba(X_test)[:, 1]
-    y_pred = (y_prob >= 0.5).astype(int)
-    
-    eval_df = X_test.copy()
-    eval_df['target'] = y_test
-    eval_df['prediction'] = y_pred
-    
-    # Static Thresholds from Notebook (A5 Policy)
-    thresholds = {
-        'VIP': 4400,
-        'IMP': 2600,
-        'High': 1800,
-        'Medium': 800,
-    }
-
-    def assign_segment(ltv):
-        if ltv >= thresholds['VIP']: return 'VIP'
-        if ltv >= thresholds['IMP']: return 'IMP'
-        if ltv >= thresholds['High']: return 'High'
-        if ltv >= thresholds['Medium']: return 'Medium'
-        return 'Low'
-
-    eval_df['Segment'] = eval_df['Lifetime_Value'].apply(assign_segment)
-    
-    segment_metrics = {}
-    for seg in ['VIP', 'IMP', 'High', 'Medium', 'Low']:
-        seg_data = eval_df.query("Segment == @seg")
-        if not seg_data.empty:
-            recall = recall_score(seg_data['target'], seg_data['prediction'], zero_division=0)
-            segment_metrics[f"recall_{seg.lower()}"] = recall
-
-    mlflow.log_metrics(segment_metrics)
-    return segment_metrics
 
 
 def build_model(
@@ -196,17 +158,7 @@ def build_model(
             final_model.fit(X_train, y_train)
             
             # 3. Log model metrics
-            y_pred = final_model.predict(X_test)
-            y_prob = final_model.predict_proba(X_test)[:, 1]
-            
-            metrics = {
-                "recall": recall_score(y_test, y_pred),
-                "avg_precision": average_precision_score(y_test, y_prob),
-                "auc_roc": roc_auc_score(y_test, y_prob),
-                "accuracy": accuracy_score(y_test, y_pred),
-            }
-            mlflow.log_metrics(metrics)
-            _evaluate_model(final_model, X_test, y_test, y_pred)
+            evaluate_model(final_model, X_test, y_test)
             
             # 4. Log best model and params
             mlflow.log_params(best_params)
