@@ -11,13 +11,16 @@ TARGET = 'Churned'
 
 def prepare_dataset(df: pd.DataFrame):
     """Prepare the dataset for feature engineering"""
-    
+    PREPROCESS_DATA_PATH.mkdir(parents=True, exist_ok=True)
+
      # ------------------------------- preprocess flags (distributional) ------------------------------ #
     # Missing Flag: Captures rows with any nulls (or specific important ones)
     df['Flag_Missing'] = df.isnull().any(axis=1).astype('uint8')
     
     # Extreme Flag: Statistical outlier detection
-    df['Flag_AOV_Extreme'] = df["Average_Order_Value"].gt(400).astype('uint8')
+    df['Flag_AOV_Extreme'] = df["Average_Order_Value"].gt(400).fillna(False).astype('uint8')
+    
+    logger.logging.info("FLAG: create [Flag_Missing, Flag_AOV_Extreme] flag features")
     
     # ---------------------------------- split data to avoid leakage --------------------------------- #
     train_df, test_df = train_test_split(
@@ -28,8 +31,6 @@ def prepare_dataset(df: pd.DataFrame):
         )
     
     # ---------------------------------- save train and test dataset --------------------------------- #
-    PREPROCESS_DATA_PATH.mkdir(parents=True, exist_ok=True)
-    
     train_path = PREPROCESS_DATA_PATH / "train.parquet"
     test_path = PREPROCESS_DATA_PATH / "test.parquet"
     
@@ -46,9 +47,9 @@ def prepare_dataset(df: pd.DataFrame):
         test_sum = test_df[flag_col].sum()
         log_metrics.append(f"  {flag_col} -> train: {train_sum}, test: {test_sum}")
     
-    log_metrics.append("\nSaved dataset ready for feature engineering:")
-    log_metrics.append(f"  Train: {train_path.relative_to(PROJECT_ROOT)}")
-    log_metrics.append(f"  Test:  {test_path.relative_to(PROJECT_ROOT)}")
+    log_metrics.append("\nPREPARE_TRAIN_TEST: Saved dataset ready for feature engineering:")
+    log_metrics.append(f"  Train: [{train_path.relative_to(PROJECT_ROOT)}]")
+    log_metrics.append(f"  Test:  [{test_path.relative_to(PROJECT_ROOT)}]")
     
     logger.logging.info("\n".join(log_metrics))
     

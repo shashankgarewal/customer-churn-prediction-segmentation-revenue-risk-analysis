@@ -188,7 +188,9 @@ def build_model(
                 case "randomforest": final_model = RandomForestClassifier(**best_params, random_state=RANDOM_STATE, n_jobs=-1)
                 case "xgboost": final_model = XGBClassifier(**best_params, random_state=RANDOM_STATE)
                 case "hgboost": final_model = HistGradientBoostingClassifier(**best_params, random_state=RANDOM_STATE)
-                case "catboost": final_model = CatBoostClassifier(**best_params, cat_features=cat_cols, random_seed=RANDOM_STATE, verbose=False, allow_writing_files=False)
+                case "catboost": final_model = CatBoostClassifier(**best_params, 
+                                                                  cat_features=cat_cols, random_seed=RANDOM_STATE, 
+                                                                  verbose=False, allow_writing_files=False)
                 case "lightgbm": final_model = LGBMClassifier(**best_params, random_state=RANDOM_STATE)
                 case _: raise ValueError(f"Unsupported model: {model_name}")
             final_model.fit(X_train, y_train)
