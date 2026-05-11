@@ -30,6 +30,9 @@ class PipelineArtifacts:
     raw_path: Path
     base_dir: Path = Path("data/interim/base")
     feature_dir: Path = Path("data/interim/new-features")
+    imputed_dir: Path = Path("data/interim/imputed")
+    encoded_dir: Path = Path("data/interim/encoded")
+    processed_dir: Path = Path("data/processed")
     transformed_dir: Path = Path("data/interim/transformed")
 
 
@@ -55,13 +58,16 @@ def _create_features(train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple[pd.
     _log_step_shape("feature_creation", train_features, test_features)
     return train_features, test_features
 
-
-def _transform_features(train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _impute_features(train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     train_processed = impute_missing_features(train_df, fit=True)
     test_processed = impute_missing_features(test_df, fit=False)
 
-    train_processed = encode_low_cardinality_features(train_processed, fit=True)
-    test_processed = encode_low_cardinality_features(test_processed, fit=False)
+    _log_step_shape("feature_imputation", train_processed, test_processed)
+    return train_processed, test_processed
+
+def _encode_features(train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    train_processed = encode_low_cardinality_features(train_df, fit=True)
+    test_processed = encode_low_cardinality_features(test_df, fit=False)
 
     train_processed = encode_mid_cardinality_features(train_processed, fit=True)
     test_processed = encode_mid_cardinality_features(test_processed, fit=False)
@@ -72,13 +78,17 @@ def _transform_features(train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple[
     train_processed = train_processed.reindex(columns=ordered_columns)
     test_processed = test_processed.reindex(columns=ordered_columns, fill_value=0)
 
-    _log_step_shape("feature_transformation", train_processed, test_processed)
+    _log_step_shape("feature_encoding", train_processed, test_processed)
     return train_processed, test_processed
 
+def _discard_item(items: list[str], item: str) -> list[str]:
+    """Remove an item from the list and return the remaining items."""
+    return [i for i in items if i != item]
 
 def run_pipeline(
     raw_data_path: str | Path = DEFAULT_RAW_DATA_PATH,
     models: Sequence[str] | None = None,
+    trials: int = 15
 ) -> None:
     """Run the full churn training workflow from raw data to model experiments."""
 
@@ -98,11 +108,36 @@ def run_pipeline(
     train_features, test_features = _create_features(train_df, test_df)
     _save_split(train_features, test_features, artifacts.feature_dir)
 
-    train_processed, test_processed = _transform_features(train_features, test_features)
-    _save_split(train_processed, test_processed, artifacts.transformed_dir)
+    train_processed, test_processed = _impute_features(train_features, test_features)
+    train_preencoded_cat, test_preencoded_cat = train_processed.copy(), test_processed.copy()
+    _save_split(train_processed, test_processed, artifacts.imputed_dir)
+    
+    train_processed, test_processed = _encode_features(train_processed, test_processed)
+    _save_split(train_processed, test_processed, artifacts.encoded_dir)
+    
+    _save_split(train_processed, test_processed, artifacts.processed_dir)
 
     logging.info("PIPELINE_STEP: model_training started | models=%s", selected_models)
-    build_model(train_df=train_processed, test_df=test_processed, target=TARGET, models=selected_models)
+    
+    if "catboost" in selected_models:
+        build_model(
+            train_df=train_preencoded_cat,
+            test_df=test_preencoded_cat,
+            target=TARGET,
+            models=["catboost"],
+            n_trials=trials,
+        )
+
+    rest_models = _discard_item(selected_models, "catboost")
+
+    if rest_models:
+        build_model(
+            train_df=train_processed,
+            test_df=test_processed,
+            target=TARGET,
+            models=rest_models,
+            n_trials=trials,
+        )
     logging.info("PIPELINE_COMPLETE: churn training workflow finished successfully.")
 
 
@@ -120,9 +155,15 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Optional list of model names to train.",
     )
+    parser.add_argument(
+        "--trials",
+        type=int,
+        default=15,
+        help="No of trials per model.",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = _parse_args()
-    run_pipeline(raw_data_path=args.data_path, models=args.models)
+    run_pipeline(raw_data_path=args.data_path, models=args.models, trials=args.trials)
