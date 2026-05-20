@@ -1,0 +1,23 @@
+artifact_path: file:///E:/Projects/ecom-customer-behaviour/mlflow/experiment_logs/models/m-7bd961c87bd94befac4fbcf8c8730663/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.pkl
+    lgb_version: 4.6.0
+    model_class: lightgbm.sklearn.LGBMClassifier
+    serialization_format: cloudpickle
+    skops_trusted_types: null
+  python_function:
+    data: model.pkl
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.12.2
+mlflow_version: 3.12.0
+model_id: m-7bd961c87bd94befac4fbcf8c8730663
+model_size_bytes: 3578867
+model_uuid: m-7bd961c87bd94befac4fbcf8c8730663
+prompts: null
+run_id: 4547f49d0f224cd69cb31fbf3f2eaa07
+utc_time_created: '2026-05-10 13:14:30.511586'
