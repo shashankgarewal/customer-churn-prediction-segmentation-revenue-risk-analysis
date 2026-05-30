@@ -4,19 +4,13 @@ from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassif
 from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
-from sklearn.model_selection import cross_val_score
-from sklearn.metrics import (
-    accuracy_score,
-    average_precision_score,
-    recall_score,
-    roc_auc_score,
-)
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 import optuna
 import mlflow
 
 from src.utils.common import get_project_root
 from src.utils.logger import logging
-from src.model.evaluate_churn import evaluate_model
+from src.model.evaluate_churn import evaluate_model, _assign_segment, plot_segment_distributions
 
 RANDOM_STATE = 42 
 
@@ -25,12 +19,18 @@ RANDOM_STATE = 42
 def _tune_model(model_name, X, y):
     """hyperparameter setup with optuna and cross-validation"""
 
+    # Multi-level stratification: combine segment and label once per study
+    strat_key = X['Lifetime_Value'].apply(_assign_segment).astype(str) + "_" + y.astype(str)
+    cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=RANDOM_STATE)
+    cv_splits = list(cv.split(X, strat_key))
+
     def objective(trial):
         match model_name:
             case "randomforest":
                 params = {
                     "n_estimators": trial.suggest_int("n_estimators", 200, 500),
                     "max_depth": trial.suggest_int("max_depth", 5, 20),
+                    "class_weight": None,
                     "random_state": RANDOM_STATE,
                     "n_jobs": -1
                 }
@@ -82,7 +82,14 @@ def _tune_model(model_name, X, y):
         if model_name == "catboost":
             fit_params["cat_features"] = X.select_dtypes(include=["object", "category"]).columns.tolist()
             
-        scores = cross_val_score(model, X, y, cv=3, scoring="recall", n_jobs=-1, params=fit_params if fit_params else None)
+        scores = cross_val_score(
+            model, X, y, 
+            cv=cv_splits,  
+            scoring="neg_log_loss", 
+            n_jobs=-1, 
+            params=fit_params if fit_params else None,
+        )
+        
         return scores.mean()
     
     return objective
@@ -108,11 +115,15 @@ def build_model(
     mlflow.set_tracking_uri(tracking_db)
 
     # set log_model and log_artifact location at create experiment
-    if not mlflow.get_experiment_by_name(experiment_name):
+    exp = mlflow.get_experiment_by_name(experiment_name)
+    if exp is None:
         mlflow.create_experiment(
             name=experiment_name,
             artifact_location=artifact_root
         )
+    elif exp.lifecycle_stage == "deleted":
+        logging.info("MODEL_TRAIN: Experiment '%s' exists but is deleted. Restoring it.", experiment_name)
+        mlflow.tracking.MlflowClient().restore_experiment(exp.experiment_id)
 
     mlflow.set_experiment(experiment_name)
     
@@ -123,13 +134,18 @@ def build_model(
         models = ["randomforest", "xgboost", "hgboost", "catboost", "lightgbm"]
     
     for model_name in models:
-        # Parent Run for the Model Type
+        # Psarent Run for the Model Type
         with mlflow.start_run(run_name=model_name):
             
             # 1. Hyperparameter Tuning with bayesian optimization
             logging.info(f"MODEL_TRAIN: Tuning {model_name} with {n_trials} experiments")
             study = optuna.create_study(direction="maximize")
-            study.optimize(_tune_model(model_name, X_train, y_train), n_trials=n_trials)
+            study.optimize(
+                _tune_model(model_name, X_train, y_train), 
+                n_trials=n_trials, 
+                show_progress_bar=True
+            )
+            mlflow.log_param("n_trials", len(study.trials))
             
             try:
                 fig_hist = optuna.visualization.plot_optimization_history(study)
@@ -157,38 +173,40 @@ def build_model(
                 case _: raise ValueError(f"Unsupported model: {model_name}")
             final_model.fit(X_train, y_train)
             
-            # 3. Log model metrics
-            evaluate_model(final_model, X_test, y_test)
+            # 3. Log model metrics including segment-specific results
+            metrics = evaluate_model(final_model, X_test, y_test)
+            mlflow.log_metrics(metrics)
+
+            # 4. Generate and log probability distribution plots per segment
+            dist_fig = plot_segment_distributions(final_model, X_test, y_test)
+            mlflow.log_figure(dist_fig, f"plots/{model_name}_segment_distributions.png")
             
-            # 4. Log best model and params
+            # 5. Log best model and params
             mlflow.log_params(best_params)
+            logging.info(f"MODEL_TRAIN: log metric, probability distribution, and parameters")
             match model_name:
                 case "randomforest" | "hgboost":
                     mlflow.sklearn.log_model(
                         final_model,
-                        artifact_path="model",
-                        registered_model_name=f"churn_model"
+                        name=model_name
                     )
 
                 case "xgboost":
                     mlflow.xgboost.log_model(
                         final_model,
-                        artifact_path="model",
-                        registered_model_name=f"churn_model"
+                        name=model_name
                     )
 
                 case "catboost":
                     mlflow.catboost.log_model(
                         final_model,
-                        artifact_path="model",
-                        registered_model_name=f"churn_model"
+                        name=model_name
                     )
 
                 case "lightgbm":
                     mlflow.lightgbm.log_model(
                         final_model,
-                        artifact_path="model",
-                        registered_model_name=f"churn_model"
+                        name=model_name
                     )
             mlflow.set_tag("model_type", model_name)
                 
