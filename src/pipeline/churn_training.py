@@ -10,12 +10,7 @@ import pandas as pd
 from src.data.ingest import load_data
 from src.data.preprocess import prepare_dataset
 from src.data.validate import validate_data
-from src.features.create import interaction_features
-from src.features.transform import (
-    encode_low_cardinality_features,
-    encode_mid_cardinality_features,
-    impute_missing_features,
-)
+from src.features.processor import process_features
 from src.model.train_churn import build_model
 from src.utils.logger import logging
 
@@ -52,35 +47,6 @@ def _log_step_shape(step_name: str, train_df: pd.DataFrame, test_df: pd.DataFram
     )
 
 
-def _create_features(train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    train_features = interaction_features(train_df)
-    test_features = interaction_features(test_df)
-    _log_step_shape("feature_creation", train_features, test_features)
-    return train_features, test_features
-
-def _impute_features(train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    train_processed = impute_missing_features(train_df, fit=True)
-    test_processed = impute_missing_features(test_df, fit=False)
-
-    _log_step_shape("feature_imputation", train_processed, test_processed)
-    return train_processed, test_processed
-
-def _encode_features(train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    train_processed = encode_low_cardinality_features(train_df, fit=True)
-    test_processed = encode_low_cardinality_features(test_df, fit=False)
-
-    train_processed = encode_mid_cardinality_features(train_processed, fit=True)
-    test_processed = encode_mid_cardinality_features(test_processed, fit=False)
-
-    feature_columns = [column for column in train_processed.columns if column != TARGET]
-    ordered_columns = feature_columns + [TARGET]
-
-    train_processed = train_processed.reindex(columns=ordered_columns)
-    test_processed = test_processed.reindex(columns=ordered_columns, fill_value=0)
-
-    _log_step_shape("feature_encoding", train_processed, test_processed)
-    return train_processed, test_processed
-
 def _discard_item(items: list[str], item: str) -> list[str]:
     """Remove an item from the list and return the remaining items."""
     return [i for i in items if i != item]
@@ -105,16 +71,16 @@ def run_pipeline(
     _save_split(train_df, test_df, artifacts.base_dir)
     _log_step_shape("dataset_split", train_df, test_df)
 
-    train_features, test_features = _create_features(train_df, test_df)
-    _save_split(train_features, test_features, artifacts.feature_dir)
+    # Unified processing for CatBoost (skips encoding)
+    train_preencoded_cat = process_features(train_df, fit=True, is_catboost=True)
+    test_preencoded_cat = process_features(test_df, fit=False, is_catboost=True)
+    _log_step_shape("feature_processing_catboost", train_preencoded_cat, test_preencoded_cat)
+    _save_split(train_preencoded_cat, test_preencoded_cat, artifacts.transformed_dir)
 
-    train_processed, test_processed = _impute_features(train_features, test_features)
-    train_preencoded_cat, test_preencoded_cat = train_processed.copy(), test_processed.copy()
-    _save_split(train_processed, test_processed, artifacts.imputed_dir)
-    
-    train_processed, test_processed = _encode_features(train_processed, test_processed)
-    _save_split(train_processed, test_processed, artifacts.encoded_dir)
-    
+    # Unified processing for all other models (includes encoding)
+    train_processed = process_features(train_df, fit=True, is_catboost=False)
+    test_processed = process_features(test_df, fit=False, is_catboost=False)
+    _log_step_shape("feature_processing_standard", train_processed, test_processed)
     _save_split(train_processed, test_processed, artifacts.processed_dir)
 
     logging.info("PIPELINE_STEP: model_training started | models=%s", selected_models)
