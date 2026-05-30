@@ -1,14 +1,18 @@
 import pandas as pd
-from sklearn.metrics import recall_score, average_precision_score, roc_auc_score
+import numpy as np
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import average_precision_score, roc_auc_score, log_loss
 
 TARGET = 'Churned'
 RETENTION_RATE = 0.7 # out of 100 - 70 customer stays after intervention
 THRESHOLDS = {
-    'VIP': [4400, 0.25],
-    'IMP': [2600, 0.3],
+    'VIP': [4400, 0.18],
+    'IMP': [2600, 0.2],
     'High': [1800, 0.4],
-    'Medium': [800, 0.5],
-    'Low': [0, 0.65],
+    'Medium': [800, 0.4],
+    'Low': [0, 0.55],
 }
 
 def _assign_segment(ltv):
@@ -20,54 +24,74 @@ def _assign_segment(ltv):
     return 'No_VALUE'
 
 def evaluate_model(model, X_test, y_test) -> dict:
-    """Evaluate churn model performance of unseen data"""
+    """Evaluate churn model performance using metrics that are independent of threshold on unseen data"""
     
-    y_pred = model.predict(X_test)
     y_prob = model.predict_proba(X_test)[:, 1]
     
     metrics = {
-        "recall": recall_score(y_test, y_pred),
-        "avg_precision": average_precision_score(y_test, y_prob),
-        "auc_roc": roc_auc_score(y_test, y_prob),
+        "ap": average_precision_score(y_test, y_prob),
+        "roc": roc_auc_score(y_test, y_prob),
+        "log_loss": log_loss(y_test, y_prob),
     }
 
-    # segment level metrics
-    df_eval = pd.concat([X_test, y_test], axis=1).copy()
+    # Prepare dataframe for segment level metrics
+    df_eval = X_test.copy()
+    df_eval[TARGET] = y_test.values
     df_eval['Segment'] = df_eval['Lifetime_Value'].apply(_assign_segment)
     df_eval['Prob'] = y_prob
     
-    for seg in THRESHOLDS.keys():
-        seg_data = df_eval.query("Segment == @seg")
+    for seg, threshold_vals in THRESHOLDS.items():
+        prob_threshold = threshold_vals[1]
+        seg_data = df_eval[df_eval['Segment'] == seg]
+        
         if not seg_data.empty:
-            df_eval['Prediction'] = int(df_eval['Prob'] >= THRESHOLDS[seg][1])
-            
-            recall = recall_score(seg_data[TARGET], seg_data['Prediction'], zero_division=0)
-            avg_precision = average_precision_score(seg_data[TARGET], seg_data['Prediction'], zero_division=0)
-            
-            metrics[f"recall_{seg.lower()}"] = recall
-            metrics[f"avg_precision_{seg.lower()}"] = avg_precision
-            
+            y_true_seg = seg_data[TARGET]
+            y_prob_seg = seg_data['Prob']
+            # y_pred_seg = (y_prob_seg >= prob_threshold).astype(int)
+
+            # metrics[f"recall_{seg.lower()}"] = recall_score(y_true_seg, y_pred_seg, zero_division=0)
+            metrics[f"ap_{seg.lower()}"] = average_precision_score(y_true_seg, y_prob_seg)  if y_true_seg.sum() > 0 else 0.0
+
+            # ROC-AUC requires both classes to be present in the segment slice
+            if y_true_seg.nunique() > 1:
+                metrics[f"roc_{seg.lower()}"] = roc_auc_score(y_true_seg, y_prob_seg)
+            else:
+                metrics[f"roc_{seg.lower()}"] = 0.5
+        else:
+            metrics[f"recall_{seg.lower()}"] = 0.0
+            metrics[f"ap_{seg.lower()}"] = 0.0
+            metrics[f"roc_{seg.lower()}"] = 0.5
+
     return metrics
 
-def evaluate_impact(model, X) -> dict:
-    """Evaluate business impact of churn prediction based customer intervention"""    
-    
-    X['Segment'] = X['Lifetime_Value'].apply(_assign_segment)
-    X['Prob'] = y_prob
-
-    def get_churn_prediction(churn_prob):
-        if churn_prob >= THRESHOLDS['VIP'][1]: return 1
-        if churn_prob >= THRESHOLDS['IMP'][1]: return 1
-        if churn_prob >= THRESHOLDS['High'][1]: return 1
-        if churn_prob >= THRESHOLDS['Medium'][1]: return 1
-        if churn_prob > THRESHOLDS['Low'][1]: return 1
-        return 0
-    
-    df_eval = pd.concat([X, y], axis=1).copy()
-    df_eval['Segment'] = df_eval['Lifetime_Value'].apply(_assign_segment)
-    df_eval['Churn_Pred'] = df_eval['Churn_prob'] = df_eval['Lifetime_Value'].apply(assign_segment)
-    
+def plot_segment_distributions(model, X, y):
+    """Generate probability distribution plots for each segment.
+    Purpose: Determine probability threshold for each segment"""
     y_prob = model.predict_proba(X)[:, 1]
+    df = X.copy()
+    df[TARGET] = y.values
+    df['Prob'] = y_prob
+    df['Segment'] = df['Lifetime_Value'].apply(_assign_segment)
+
+    fig, axes = plt.subplots(len(THRESHOLDS), 1, figsize=(10, 5 * len(THRESHOLDS)))
+    if len(THRESHOLDS) == 1:
+        axes = [axes]
+
+    for i, seg in enumerate(THRESHOLDS.keys()):
+        seg_data = df[df['Segment'] == seg]
+        if not seg_data.empty:
+            sns.kdeplot(data=seg_data, x='Prob', hue=TARGET, fill=True, ax=axes[i], common_norm=False)
+            axes[i].set_title(f"{seg}")
+            axes[i].set_xlim(0, 1)
+            axes[i].axvline(THRESHOLDS[seg][1], color='red', linestyle='--', label='Threshold')
+    
+    plt.tight_layout()
+    plt.suptitle("Probability Distribution")
+    return fig
+
+def evaluate_impact(model, X, y) -> dict:
+    """Evaluate business impact of churn prediction based customer intervention"""    
+    # Implementation logic for impact remains...
     seg_metrics = dict()
     
 
