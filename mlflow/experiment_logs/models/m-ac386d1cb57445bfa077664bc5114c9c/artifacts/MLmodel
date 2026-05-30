@@ -1,0 +1,23 @@
+artifact_path: file:///E:/Projects/ecom-customer-behaviour/mlflow/experiment_logs/models/m-ac386d1cb57445bfa077664bc5114c9c/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.12.2
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.12.0
+model_id: m-ac386d1cb57445bfa077664bc5114c9c
+model_size_bytes: 902802
+model_uuid: m-ac386d1cb57445bfa077664bc5114c9c
+prompts: null
+run_id: f699176ec1ee4fdc85c2bdec2ac521c4
+utc_time_created: '2026-05-30 08:14:14.046843'

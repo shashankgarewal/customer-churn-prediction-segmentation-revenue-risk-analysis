@@ -1,0 +1,22 @@
+artifact_path: file:///E:/Projects/ecom-customer-behaviour/mlflow/experiment_logs/models/m-43f3a451416840adb3c2639b8a4f683a/artifacts
+flavors:
+  catboost:
+    catboost_version: 1.2.10
+    code: null
+    data: model.cb
+    model_type: CatBoostClassifier
+    save_format: cbm
+  python_function:
+    data: model.cb
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.catboost
+    python_version: 3.12.2
+mlflow_version: 3.12.0
+model_id: m-43f3a451416840adb3c2639b8a4f683a
+model_size_bytes: 6536260
+model_uuid: m-43f3a451416840adb3c2639b8a4f683a
+prompts: null
+run_id: e4a64b1535ab40bd8d6224e4049cdf35
+utc_time_created: '2026-05-30 07:30:50.182832'
