@@ -7,3 +7,8 @@ ydata-profiling
 mlflow
 xgboost
 great_expectations
+catboost
+lightgbm
+optuna
+pyyaml
+plotly
