@@ -37,20 +37,20 @@ def _tune_model(model_name, X, y):
                 model = RandomForestClassifier(**params)
             case "xgboost":
                 params = {
-                    "n_estimators": trial.suggest_int("n_estimators", 300, 800),
-                    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.1),
-                    "max_depth": trial.suggest_int("max_depth", 3, 10),
-                    "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+                    "n_estimators": trial.suggest_int("n_estimators", 550, 800),
+                    "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.02),
+                    "max_depth": trial.suggest_int("max_depth", 6, 8),
+                    "subsample": trial.suggest_float("subsample", 0.6, 0.9),
                     "random_state": RANDOM_STATE
                 }
                 model = XGBClassifier(**params)
 
             case "catboost":
                 params = {
-                    "iterations": trial.suggest_int("iterations", 300, 800),
+                    "iterations": trial.suggest_int("iterations", 600, 900),
                     "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.1),
-                    "depth": trial.suggest_int("depth", 4, 10),
-                    "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1, 10),
+                    "depth": trial.suggest_int("depth", 6, 9),
+                    "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 4, 9),
                     "random_seed": RANDOM_STATE,
                     "verbose": False,
                     "allow_writing_files": True
@@ -59,19 +59,19 @@ def _tune_model(model_name, X, y):
 
             case "lightgbm":
                 params = {
-                    "n_estimators": trial.suggest_int("n_estimators", 300, 800),
-                    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.1),
-                    "num_leaves": trial.suggest_int("num_leaves", 20, 150),
-                    "max_depth": trial.suggest_int("max_depth", -1, 15),
+                    "n_estimators": trial.suggest_int("n_estimators", 550, 800),
+                    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.04),
+                    "num_leaves": trial.suggest_int("num_leaves", 20, 70),
+                    "max_depth": trial.suggest_int("max_depth", 10, 20),
                     "random_state": RANDOM_STATE
                 }
                 model = LGBMClassifier(**params)
 
             case "hgboost":
                 params = {
-                    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.1),
-                    "max_iter": trial.suggest_int("max_iter", 200, 500),
-                    "max_depth": trial.suggest_int("max_depth", 3, 10),
+                    "learning_rate": trial.suggest_float("learning_rate", 0.02, 0.06),
+                    "max_iter": trial.suggest_int("max_iter", 400, 500),
+                    "max_depth": trial.suggest_int("max_depth", 8, 10),
                     "random_state": RANDOM_STATE
                 }
                 model = HistGradientBoostingClassifier(**params)
