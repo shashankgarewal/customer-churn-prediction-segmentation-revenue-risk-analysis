@@ -154,6 +154,35 @@ full pipeline experimentation. Ensemble methods dominated:
 
 4. **CatBoost** — native ordered categorical encoding without preprocessing. Evaluated to test whether catboost native categorical preprocessing improves signal on LTV segment and contract-type features.
 
+### Hyperparameter Tuning
+Bayesian optimization via Optuna (TPE sampler) with stratified 3-fold cross-validation. Stratification on combined segment × churn label to preserve segment distribution across folds.
+
+Two-phase approach: broad search (45 trials) followed by a focused run on tightened ranges derived from `slice plot analysis`.
+
+### Final Model Selection
+**CatBoost** selected as the final model based on overall AP and segment-level performance.
+
+All gradient boosting variants converged to similar overall AP (~0.916), making segment-level metrics the deciding factor.
+
+| Metric | CatBoost | XGBoost | LightGBM | HGBoost |
+|---|---|---|---|---|
+| AP | 0.9161 | 0.9155 | 0.9162 | 0.9149 |
+| ROC-AUC | 0.9309 | 0.9295 | 0.9300 | 0.9292 |
+| ap_imp | 0.9626 | 0.9629 | 0.9622 | 0.9611 |
+| ap_vip | 0.9328 | 0.9077 | 0.9083 | 0.9272 |
+| ap_high | 0.9709 | 0.9705 | 0.9708 | 0.9696 |
+| ap_medium | 0.8111 | 0.8073 | 0.8074 | 0.8092 |
+| log_loss | 0.2342 | 0.2360 | 0.2345 | 0.2371 |
+
+CatBoost's advantage is most pronounced on the VIP segment (`ap_vip: 0.9328` vs XGBoost's `0.9077`) — the highest business-value customers, while being 
+
+Log loss is slightly higher than CatBoost's best run, however the business action is a binary intervention, so ranking quality (AP/ROC) matters more than probability calibration.
+
+### Segment Performance Note
+Medium segment shows consistently weaker performance (AP ~0.81) across all models. 
+
+This reflects the underlying data reality — medium customers have a 17.4% churn rate vs 35–40% for high/low/IMP segments. Lower churn rate means fewer consistent positive examples, making the churn signal inherently noisier for this group. Not a modeling failure — a reflection of business behavior.
+
 ## Future Steps:
 * **LTV-Weighted Modeling:** Currently, the model treats all customers as equally important. Future versions could use sample weights based on LTV so the model prioritizes high-value customers during training.
 * **Expected Loss Regression:** Move from simple classification to a regression approach that predicts "Expected Financial Loss" (LTV × Churn Probability). This would allow the business to rank customers by actual dollar risk.
