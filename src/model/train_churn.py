@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
@@ -178,8 +179,10 @@ def build_model(
             mlflow.log_metrics(metrics)
 
             # 4. Generate and log probability distribution plots per segment
-            dist_fig = plot_segment_distributions(final_model, X_test, y_test)
-            mlflow.log_figure(dist_fig, f"plots/{model_name}_segment_distributions.png")
+            dist_figs = plot_segment_distributions(final_model, X_test, y_test)
+            for seg_name, fig in dist_figs.items():
+                mlflow.log_figure(fig, f"plots/{model_name}_{seg_name.lower()}_distribution.png")
+                plt.close(fig)
             
             # 5. Log best model and params
             mlflow.log_params(best_params)

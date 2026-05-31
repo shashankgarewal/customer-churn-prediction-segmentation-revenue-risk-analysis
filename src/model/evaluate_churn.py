@@ -58,36 +58,37 @@ def evaluate_model(model, X_test, y_test) -> dict:
             else:
                 metrics[f"roc_{seg.lower()}"] = 0.5
         else:
-            metrics[f"recall_{seg.lower()}"] = 0.0
             metrics[f"ap_{seg.lower()}"] = 0.0
             metrics[f"roc_{seg.lower()}"] = 0.5
 
     return metrics
 
-def plot_segment_distributions(model, X, y):
+def plot_segment_distributions(model, X, y) -> dict[str, plt.Figure]:
     """Generate probability distribution plots for each segment.
     Purpose: Determine probability threshold for each segment"""
+    
     y_prob = model.predict_proba(X)[:, 1]
     df = X.copy()
     df[TARGET] = y.values
     df['Prob'] = y_prob
     df['Segment'] = df['Lifetime_Value'].apply(_assign_segment)
 
-    fig, axes = plt.subplots(len(THRESHOLDS), 1, figsize=(10, 5 * len(THRESHOLDS)))
-    if len(THRESHOLDS) == 1:
-        axes = [axes]
+    figs = {}
 
-    for i, seg in enumerate(THRESHOLDS.keys()):
+    for seg in THRESHOLDS.keys():
         seg_data = df[df['Segment'] == seg]
         if not seg_data.empty:
-            sns.kdeplot(data=seg_data, x='Prob', hue=TARGET, fill=True, ax=axes[i], common_norm=False)
-            axes[i].set_title(f"{seg}")
-            axes[i].set_xlim(0, 1)
-            axes[i].axvline(THRESHOLDS[seg][1], color='red', linestyle='--', label='Threshold')
-    
-    plt.tight_layout()
-    plt.suptitle("Probability Distribution")
-    return fig
+            fig, ax = plt.subplots(figsize=(8, 5))
+            sns.kdeplot(data=seg_data, x='Prob', hue=TARGET, fill=True, ax=ax, common_norm=False)
+            
+            ax.set_title(f"Probability Distribution - {seg}")
+            ax.set_xlim(0, 1)
+            ax.set_xticks([0, 0.5, 1.0])
+            ax.grid(True, axis='x', linestyle='--', alpha=0.7)
+            
+            figs[seg] = fig
+
+    return figs
 
 def evaluate_impact(model, X, y) -> dict:
     """Evaluate business impact of churn prediction based customer intervention"""    
