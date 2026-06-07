@@ -74,6 +74,7 @@ A classification model will be developed to flag customers at risk of leaving, p
 * **Great Expectations**: Schema enforcement, data profiling, and pipeline data validation.
 * **MLFlow**: Model experiment tracking, artifact logging, and model registry for production deployment.
 * **Optuna**: Parametric hyperparameter optimization and automated model fine-tuning.
+* **SHAP**: Model explainability and retention strategy. 
 
 ---
 ## Setup
@@ -113,15 +114,16 @@ All commands should be executed from the project root directory.
 ### 1. Training Pipeline
 Runs the full workflow: data validation, preprocessing, feature engineering, and hyperparameter tuning. Results and models are tracked in MLflow.
 ```bash
-python -m src.pipeline.churn_training --trials 15 --models xgboost catboost
+python -m src.pipeline.churn_training --trials {n_trials} --models {support: randomforest xgboost catboost lightgbm hgboost}
 ```
 *Parameters:*
-- `--data-path`: (Optional) Path to raw data CSV.
+- `--data-path`: (Optional) Path to raw data CSV relative from project root.
 - `--models`: (Optional) Space-separated list of models to train (e.g., `xgboost catboost lightgbm`).
 - `--trials`: (Optional) Number of Optuna optimization trials per model.
 
 ### 2. Inference Pipeline
-Loads the 'best' model from the MLflow Registry (with local fallback) and evaluates it against the test set, including business impact analysis.
+Executes model prediction, business impact analysis, and SHAP-based retention strategy generation. The pipeline supports decoupled output modes to serve both high-level analytical summaries and granular operational records.
+
 ```bash
 python -m src.pipeline.churn_inference
 ```
@@ -183,7 +185,9 @@ Medium segment shows consistently weaker performance (AP ~0.81) across all model
 
 This reflects the underlying data reality — medium customers have a 17.4% churn rate vs 35–40% for high/low/IMP segments. Lower churn rate means fewer consistent positive examples, making the churn signal inherently noisier for this group. Not a modeling failure — a reflection of business behavior.
 
-## Future Steps:
+## Future Steps and Approaches:
+* **Metric-driven Retention Strategy**: Currently, the retention strategy is static and rule-based campaign assigment. Future versions, similar to metric driven persona, can implement metric driven rentention strategies by employing feature importance, retention signals, and/or partial dependency to identify best plausible feature/approach for customer intervention.
+* **Balance Class each Segment:** The medium ltv customer segment have low proportion of churn and consistently ml algorithms are weak at capturing them. Undersampling the non-churn class sample of medium ltv segment would allow model to capture pattern better while using log-loss as optimization metric.
 * **LTV-Weighted Modeling:** Currently, the model treats all customers as equally important. Future versions could use sample weights based on LTV so the model prioritizes high-value customers during training.
 * **Expected Loss Regression:** Move from simple classification to a regression approach that predicts "Expected Financial Loss" (LTV × Churn Probability). This would allow the business to rank customers by actual dollar risk.
 * **Continuous Retention Strategies:** Current LTV segments create "boundary problems" where a small difference in value (e.g., \$799 vs \$801) leads to a different strategy. We aim to move toward strategies that treat LTV as a continuous variable.
