@@ -33,13 +33,11 @@ def churn_prediction(X_test, model):
     """
     y_prob = pd.Series(model.predict_proba(X_test)[:, 1], index=X_test.index)
     segments = X_test['Lifetime_Value'].apply(_assign_segment)
-    y_pred = pd.Series(
-        [
-            int(y_prob[idx] >= THRESHOLDS[seg][1])
-            for idx, seg in zip(X_test.index, segments)
-        ], 
-        index=X_test.index
-    )
+    
+    segment_thresholds = pd.Series({seg: THRESHOLDS[seg][1] for seg in THRESHOLDS})
+    row_thresholds = segments.map(segment_thresholds)
+
+    y_pred = (y_prob >= row_thresholds).astype(int)
     
     return y_prob, y_pred, segments
 
