@@ -252,11 +252,17 @@ def business_inference(
 
 def retention_inference(
     data: pd.DataFrame | None = None,
-    n_samples: int | None = None
+    n_samples: int | None = None,
+    output: str = "full"
 ) -> dict:
     """
     Per-churner SHAP based probability contribution, persona, and retention strategy.
     Only runs on predicted churners — no output mode needed, always per-customer.
+    
+    Return:
+    if output="full"; retention summary + per-churner details
+    if output="metrics"; retention summary only
+
     """
 
     model, model_type = _get_model()
@@ -272,7 +278,10 @@ def retention_inference(
 
     if X_churners.empty:
         logging.info("RETENTION_INFERENCE: No predicted churners in dataset")
-        return {"churners": []}
+        result = {"retention_summary": {"total_churners": 0}}
+        if output == "full":
+            result["churners"] = []
+        return result
 
     shap_results = get_top_drivers(model, X_churners)
 
@@ -293,8 +302,27 @@ def retention_inference(
             "retention_strategy":    action
         })
 
-    logging.info("RETENTION_INFERENCE: processed %d predicted churners", len(results))
-    return {"churners": results}
+    # Aggregate summary metrics
+    res_df = pd.DataFrame(results)
+    
+    # Flatten nested strategy fields for aggregation
+    strategy_series = res_df["retention_strategy"]
+    
+    summary = {
+        "total_churners": len(res_df),
+        "avg_probability": round(float(res_df["churn_probability"].mean()), 4),
+        "by_persona": res_df["persona"].value_counts().to_dict(),
+        "by_segment": res_df["segment"].value_counts().to_dict(),
+        "by_priority": strategy_series.apply(lambda x: x["priority"]).value_counts().to_dict(),
+        "by_action": strategy_series.apply(lambda x: x["recommended_actions"]).explode().value_counts().to_dict()
+    }
+
+    result = {"retention_summary": summary}
+    if output == "full":
+        result["churners"] = results
+        
+    logging.info("RETENTION_INFERENCE: processed %d predicted churners, output=%s", len(results), output)
+    return result
 
 
 if __name__ == "__main__":
@@ -307,5 +335,5 @@ if __name__ == "__main__":
     print("business inference metrics: ", metrics)
     
     print("\nexecuting retention strategy")
-    metrics = retention_inference()
+    metrics = retention_inference(output="metrics")
     print("retention inference metrics: ", metrics)
