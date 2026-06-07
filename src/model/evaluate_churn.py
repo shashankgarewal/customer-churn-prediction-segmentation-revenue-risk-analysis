@@ -150,11 +150,50 @@ def evaluate_model(X_test, y_test, y_prob, y_pred, segments) -> dict:
 
     return {"overall": overall, "per_segment": per_segment}
 
-def evaluate_impact(model, X, y) -> dict:
-    """Evaluate business impact of churn prediction based customer intervention"""    
-    # Implementation logic for impact remains...
-    seg_metrics = dict()
-    
+def evaluate_impact(X_test, y_test, y_prob, y_pred, segments) -> dict:
+    """
+    Evaluate business impact of churn prediction based customer intervention.
+    """    
 
-    
-    return seg_metrics
+    df_eval = X_test.copy()
+    df_eval[TARGET]    = y_test.values
+    df_eval['Prob']    = y_prob.values
+    df_eval['Pred']    = y_pred.values
+    df_eval['Segment'] = segments.values
+
+    per_segment = {}
+
+    for seg in THRESHOLDS:
+        seg_df = df_eval[df_eval['Segment'] == seg]
+        if seg_df.empty:
+            continue
+
+        tp_df = seg_df[(seg_df['Pred'] == 1) & (seg_df[TARGET] == 1)]
+        fn_df = seg_df[(seg_df['Pred'] == 0) & (seg_df[TARGET] == 1)]
+        all_predicted_churners = seg_df[seg_df['Pred'] == 1]
+
+        total_churn_exposure    = round(float(seg_df[seg_df[TARGET] == 1]['Lifetime_Value'].sum()), 2)
+        revenue_at_risk         = round(float(tp_df['Lifetime_Value'].sum()), 2)
+        missed_revenue          = round(float(fn_df['Lifetime_Value'].sum()), 2)
+        retention_savings       = round(revenue_at_risk * RETENTION_RATE, 2)
+        
+        expected_financial_risk = round(float(
+            (all_predicted_churners['Lifetime_Value'] * all_predicted_churners['Prob']).sum()
+        ), 2)
+        
+        churn_capture_rate      = round(
+            revenue_at_risk / total_churn_exposure if total_churn_exposure > 0 else 0.0, 4
+        )
+
+        per_segment[seg] = {
+            "total_churn_exposure":    total_churn_exposure,
+            "revenue_at_risk":         revenue_at_risk,
+            "retention_savings":       retention_savings,
+            "missed_revenue":          missed_revenue,
+            "expected_financial_risk": expected_financial_risk,
+            "churn_capture_rate":      churn_capture_rate,
+            "churners_identified":     int(len(tp_df)),
+            "missed_churners":         int(len(fn_df))
+        }
+
+    return {"per_segment": per_segment}

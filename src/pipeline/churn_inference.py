@@ -206,11 +206,52 @@ def model_inference(
     return result
 
 
-def business_inference():
+def business_inference(
+    data: pd.DataFrame | None = None,
+    n_samples: int | None = None,
+    output: str = "full"
+) -> dict:
+    """
+    Business impact metrics per segment.
+    Requires labeled data — returns error if y_test unavailable.
+    
+    output="full"    → per-segment impact + per-customer predictions
+    output="metrics" → per-segment impact only
+    """
+
+    model, model_type = _get_model()
+    X_test, y_test, y_prob, y_pred, segments = _prepare_inference_data(
+        data, n_samples, model, model_type
+    )
+
+    if y_test is None:
+        logging.warning("BUSINESS_INFERENCE: No labels available, impact metrics require ground truth")
+        return {"error": "Business impact metrics require labeled data"}
+    
     try:
-        evaluate_impact(model, X_test, y_test)
+        impact = evaluate_impact(X_test, y_test, y_prob, y_pred, segments)
+        result = {"business_impact": impact}
     except Exception as e:
         logging.warning("INFERENCE_IMPACT: Business impact evaluation skipped or failed: %s", e)
+        return {"error": e}
+    
+    if output == "full":
+        result["predictions"] = pd.DataFrame({
+            "churn_probability": y_prob.round(4),
+            "predicted_churn":   y_pred,
+            "segment":           segments,
+            "actual_churn":      y_test.values
+        }).to_dict(orient="records")
+
+    logging.info("BUSINESS_INFERENCE: evaluation complete, output=%s", output)
+    return result
 
 if __name__ == "__main__":
-    model_inference()
+    print("building model inference")
+    metrics = model_inference(output="metrics")
+    print("model inference metrics: ", metrics)
+    
+    print("\nexecuting business inference")
+    metrics = business_inference(output="metrics")
+    print("business inference metrics: ", metrics)
+    
