@@ -4,9 +4,13 @@ import pandas as pd
 import mlflow
 from mlflow.tracking import MlflowClient
 
-from src.utils.common import get_project_root
-from src.features.processor import process_features
 from src.model.evaluate_churn import churn_prediction, evaluate_model, evaluate_impact
+from src.retention.explain  import get_top_drivers
+from src.retention.persona  import assign_persona
+from src.retention.retention import recommend_action
+
+from src.features.processor import process_features
+from src.utils.common import get_project_root
 from src.utils.logger import logging
 
 TARGET      = "Churned"
@@ -246,6 +250,53 @@ def business_inference(
     logging.info("BUSINESS_INFERENCE: evaluation complete, output=%s", output)
     return result
 
+def retention_inference(
+    data: pd.DataFrame | None = None,
+    n_samples: int | None = None
+) -> dict:
+    """
+    Per-churner SHAP based probability contribution, persona, and retention strategy.
+    Only runs on predicted churners — no output mode needed, always per-customer.
+    """
+
+    model, model_type = _get_model()
+    X_test, y_test, y_prob, y_pred, segments = _prepare_inference_data(
+        data, n_samples, model, model_type
+    )
+
+    # filter to predicted churners only
+    churner_mask = y_pred == 1
+    X_churners   = X_test[churner_mask]
+    prob_churners = y_prob[churner_mask]
+    seg_churners  = segments[churner_mask]
+
+    if X_churners.empty:
+        logging.info("RETENTION_INFERENCE: No predicted churners in dataset")
+        return {"churners": []}
+
+    shap_results = get_top_drivers(model, X_churners)
+
+    results = []
+    for i, (idx, _) in enumerate(X_churners.iterrows()):
+        seg     = seg_churners[idx]
+        drivers = shap_results[i]
+        persona = assign_persona(drivers["all_churn_drivers"])
+        action  = recommend_action(seg, persona["primary_persona"])
+
+        results.append({
+            "churn_probability":     round(float(prob_churners[idx]), 4),
+            "segment":               seg,
+            "top_churn_drivers":     drivers["top_churn_drivers"],
+            "top_retention_signals": drivers["top_retention_signals"],
+            "persona":               persona["primary_persona"],
+            "secondary_persona":     persona["secondary_persona"],
+            "retention_strategy":    action
+        })
+
+    logging.info("RETENTION_INFERENCE: processed %d predicted churners", len(results))
+    return {"churners": results}
+
+
 if __name__ == "__main__":
     print("building model inference")
     metrics = model_inference(output="metrics")
@@ -255,3 +306,6 @@ if __name__ == "__main__":
     metrics = business_inference(output="metrics")
     print("business inference metrics: ", metrics)
     
+    print("\nexecuting retention strategy")
+    metrics = retention_inference()
+    print("retention inference metrics: ", metrics)
