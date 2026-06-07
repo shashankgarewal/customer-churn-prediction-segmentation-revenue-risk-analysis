@@ -11,7 +11,7 @@ import mlflow
 
 from src.utils.common import get_project_root
 from src.utils.logger import logging
-from src.model.evaluate_churn import evaluate_model, _assign_segment, plot_segment_distributions
+from src.model.evaluate_churn import track_model, _assign_segment, plot_segment_distributions
 
 RANDOM_STATE = 42 
 
@@ -175,7 +175,7 @@ def build_model(
             final_model.fit(X_train, y_train)
             
             # 3. Log model metrics including segment-specific results
-            metrics = evaluate_model(final_model, X_test, y_test)
+            metrics = track_model(final_model, X_test, y_test)
             mlflow.log_metrics(metrics)
 
             # 4. Generate and log probability distribution plots per segment

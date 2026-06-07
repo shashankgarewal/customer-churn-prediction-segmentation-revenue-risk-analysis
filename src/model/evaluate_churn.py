@@ -1,3 +1,4 @@
+# Evaluate churn model performance module
 import pandas as pd
 import numpy as np
 
@@ -23,8 +24,9 @@ def _assign_segment(ltv):
     if ltv > THRESHOLDS['Low'][0]: return 'Low'
     return 'No_VALUE'
 
-def evaluate_model(model, X_test, y_test) -> dict:
-    """Evaluate churn model performance using metrics that are independent of threshold on unseen data"""
+def track_model(model, X_test, y_test) -> dict:
+    """Evaluate churn model performance using metrics that are independent of threshold on unseen data
+    Used for model comparision, tracking, and promption using mlflow"""
     
     y_prob = model.predict_proba(X_test)[:, 1]
     
@@ -89,6 +91,16 @@ def plot_segment_distributions(model, X, y) -> dict[str, plt.Figure]:
             figs[seg] = fig
 
     return figs
+
+def evaluate_model(model, X_test, y_test: pd.DataFrame | None = None) -> dict:
+    """Evaluate production model performance on classification ML metrics that align with business"""
+    metrics = dict()
+    y_prob = model.predict_proba(X_test)[:, 1]
+    
+    y_pred = y_prob 
+    if y_test:
+        return metrics
+    return metrics
 
 def evaluate_impact(model, X, y) -> dict:
     """Evaluate business impact of churn prediction based customer intervention"""    
