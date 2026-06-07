@@ -4,7 +4,10 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import average_precision_score, roc_auc_score, log_loss
+from sklearn.metrics import (
+    average_precision_score, roc_auc_score, log_loss,
+    precision_score, recall_score, f1_score, confusion_matrix
+)
 
 TARGET = 'Churned'
 RETENTION_RATE = 0.7 # out of 100 - 70 customer stays after intervention
@@ -23,6 +26,22 @@ def _assign_segment(ltv):
     if ltv >= THRESHOLDS['Medium'][0]: return 'Medium'
     if ltv > THRESHOLDS['Low'][0]: return 'Low'
     return 'No_VALUE'
+
+def churn_prediction(X_test, model):
+    """
+    return ltv segment, probability, and threshold based classification
+    """
+    y_prob = pd.Series(model.predict_proba(X_test)[:, 1], index=X_test.index)
+    segments = X_test['Lifetime_Value'].apply(_assign_segment)
+    y_pred = pd.Series(
+        [
+            int(y_prob[idx] >= THRESHOLDS[seg][1])
+            for idx, seg in zip(X_test.index, segments)
+        ], 
+        index=X_test.index
+    )
+    
+    return y_prob, y_pred, segments
 
 def track_model(model, X_test, y_test) -> dict:
     """Evaluate churn model performance using metrics that are independent of threshold on unseen data
@@ -92,15 +111,46 @@ def plot_segment_distributions(model, X, y) -> dict[str, plt.Figure]:
 
     return figs
 
-def evaluate_model(model, X_test, y_test: pd.DataFrame | None = None) -> dict:
-    """Evaluate production model performance on classification ML metrics that align with business"""
-    metrics = dict()
-    y_prob = model.predict_proba(X_test)[:, 1]
-    
-    y_pred = y_prob 
-    if y_test:
-        return metrics
-    return metrics
+def evaluate_model(X_test, y_test, y_prob, y_pred, segments) -> dict:
+    """
+    Evaluate production model performance on classification ML metrics that align with business
+    """
+
+    df_eval = X_test.copy()
+    df_eval[TARGET] = y_test.values
+    df_eval['Segment'] = segments.values
+    df_eval['Prob'] = y_prob.values
+    df_eval['Pred'] = y_pred.values
+
+    overall = {
+        "precision": round(precision_score(y_test, y_pred, zero_division=0), 4),
+        "recall":    round(recall_score(y_test, y_pred, zero_division=0), 4),
+        "f1":        round(f1_score(y_test, y_pred, zero_division=0), 4),
+    }
+
+    per_segment = {}
+    for seg in THRESHOLDS:
+        seg_data = df_eval[df_eval['Segment'] == seg]
+        if seg_data.empty:
+            continue
+
+        y_true_seg = seg_data[TARGET]
+        y_pred_seg = seg_data['Pred']
+
+        cm = confusion_matrix(y_true_seg, y_pred_seg, labels=[0, 1])
+        tn, fp, fn, tp = cm.ravel() if cm.shape == (2, 2) else (0, 0, 0, 0)
+
+        per_segment[seg] = {
+            "threshold":  THRESHOLDS[seg][1],
+            "total":      len(seg_data),
+            "precision":  round(precision_score(y_true_seg, y_pred_seg, zero_division=0), 4),
+            "recall":     round(recall_score(y_true_seg, y_pred_seg, zero_division=0), 4),
+            "f1":         round(f1_score(y_true_seg, y_pred_seg, zero_division=0), 4),
+            "tp": int(tp), "fp": int(fp),
+            "tn": int(tn), "fn": int(fn)
+        }
+
+    return {"overall": overall, "per_segment": per_segment}
 
 def evaluate_impact(model, X, y) -> dict:
     """Evaluate business impact of churn prediction based customer intervention"""    
