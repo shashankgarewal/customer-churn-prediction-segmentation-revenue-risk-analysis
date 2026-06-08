@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# BRAND DESIGN SYSTEM
+# CUSTOM DESIGN
 # Lora italic for quotes/display, Jost for UI
 # bg #faf9f7, accent #c0785a, dark #2a2520
 # muted #b0a898, subtle #c4baae, warm-gray #6b6259
@@ -299,7 +299,7 @@ def get_request_params():
 # ─────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div class="sidebar-logo">📉 Churn <span>Intel</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-tagline">Prediction · Explainability · Retention</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-tagline">Prediction · Explainability · Retention · Business</div>', unsafe_allow_html=True)
     st.markdown("---")
 
     st.markdown("**Data Source**")
@@ -324,8 +324,8 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("**Run Inference**")
     run_model     = st.button("01 · Model Metrics")
-    run_business  = st.button("02 · Business Impact")
-    run_retention = st.button("03 · Retention Strategy")
+    run_retention = st.button("02 · Retention Strategy")
+    run_business  = st.button("03 · Business Impact")
 
     st.markdown("---")
     st.markdown("""
@@ -338,7 +338,7 @@ with st.sidebar:
     Log Loss primary · AP + ROC per segment<br>
     Segment-specific thresholds<br>
     <br>
-    <b>Thresholds</b><br>
+    <b>Classification Thresholds</b><br>
     VIP 0.18 · IMP 0.20<br>
     High 0.40 · Med 0.40 · Low 0.55<br>
     <br>
@@ -354,11 +354,11 @@ with st.sidebar:
 # ─────────────────────────────────────────────
 st.markdown("""
 <div class="page-title">
-    <h1>Ecom Churn Prediction &amp;<br>Retention Intelligence Engine</h1>
+    <h1>Ecom Churn Intelligence Engine</h1>
     <div class="byline">
         Built by <span>Shashank Garewal</span> &nbsp;·&nbsp;
         LTV-Segmented Classification &nbsp;·&nbsp;
-        SHAP-Explained &nbsp;·&nbsp;
+        SHAP-driven Contribution &nbsp;·&nbsp;
         Segment-Aware Retention Strategy
     </div>
 </div>
@@ -453,95 +453,11 @@ if "model_result" in st.session_state:
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 
-# ═══════════════════════════════════════════════════════════════
-# SECTION 02 — BUSINESS IMPACT
-# ═══════════════════════════════════════════════════════════════
-if run_business:
-    n_s, f, ok = get_request_params()
-    if ok:
-        with st.spinner("Running business impact analysis..."):
-            if f:
-                result, err = call_api("/business/upload", files={"file": f}, output="full")
-            else:
-                result, err = call_api("/business/test", n_samples=n_s, output="full")
-        if err:
-            st.error(err)
-        elif result:
-            st.session_state["business_result"] = result
 
-if "business_result" in st.session_state:
-    result = st.session_state["business_result"]
-
-    section_header(
-        "02",
-        "Business Impact",
-        "Impact computed against ground-truth labels using LTV-weighted metrics across all LTV segments. "
-        "Retention savings estimated at 70% intervention success rate — customers correctly identified "
-        "and reached before churn. Expected financial risk weights predicted churn probability against "
-        "LTV, incorporating model confidence directly into the business exposure figure."
-    )
-
-    if "error" in result:
-        st.error(result["error"])
-    elif "business_impact" in result:
-        per_seg = result["business_impact"].get("per_segment", {})
-
-        total_exposure = sum(v.get("total_churn_exposure", 0) for v in per_seg.values())
-        total_at_risk  = sum(v.get("revenue_at_risk", 0)      for v in per_seg.values())
-        total_savings  = sum(v.get("retention_savings", 0)    for v in per_seg.values())
-        total_missed   = sum(v.get("missed_revenue", 0)       for v in per_seg.values())
-        avg_capture    = (
-            sum(v.get("churn_capture_rate", 0) for v in per_seg.values()) / len(per_seg)
-            if per_seg else 0
-        )
-
-        metric_row(
-            metric_card_html("Total Churn Exposure", f"${total_exposure:,.0f}",
-                             "actual churner LTV pool"),
-            metric_card_html("Revenue at Risk",      f"${total_at_risk:,.0f}",
-                             "correctly identified churners"),
-            metric_card_html("Retention Savings",    f"${total_savings:,.0f}",
-                             "@ 70% success rate"),
-            metric_card_html("Missed Revenue",       f"${total_missed:,.0f}",
-                             "false negatives"),
-            metric_card_html("Avg Capture Rate",     f"{avg_capture:.1%}",
-                             "LTV-weighted across segments"),
-        )
-
-        if per_seg:
-            seg_rows = []
-            for seg, v in per_seg.items():
-                seg_rows.append({
-                    "Segment":           seg,
-                    "Churners Found":    v.get("churners_identified"),
-                    "Missed":            v.get("missed_churners"),
-                    "Capture Rate":      f"{v.get('churn_capture_rate', 0):.1%}",
-                    "Revenue at Risk":   f"${v.get('revenue_at_risk', 0):,.0f}",
-                    "Retention Savings": f"${v.get('retention_savings', 0):,.0f}",
-                    "Missed Revenue":    f"${v.get('missed_revenue', 0):,.0f}",
-                    "Expected Risk":     f"${v.get('expected_financial_risk', 0):,.0f}",
-                    "Total Exposure":    f"${v.get('total_churn_exposure', 0):,.0f}",
-                })
-            st.dataframe(
-                pd.DataFrame(seg_rows).set_index("Segment"),
-                width="stretch"
-            )
-
-        # per-customer detail
-        if "predictions" in result:
-            with st.expander(f"↓ Per-customer predictions ({len(result['predictions'])} rows)"):
-                pred_df = pd.DataFrame(result["predictions"])
-                display_cols = [c for c in
-                    ["segment", "churn_probability", "predicted_churn", "actual_churn"]
-                    if c in pred_df.columns]
-                n_show = st.slider("Rows", 10, min(500, len(pred_df)), 10, key="b_rows")
-                st.dataframe(pred_df[display_cols].head(n_show), width="stretch")
-
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════
-# SECTION 03 — RETENTION STRATEGY
+# SECTION 02 — RETENTION STRATEGY
 # ═══════════════════════════════════════════════════════════════
 if run_retention:
     n_s, f, ok = get_request_params()
@@ -560,7 +476,7 @@ if "retention_result" in st.session_state:
     result = st.session_state["retention_result"]
 
     section_header(
-        "03",
+        "02",
         "Retention Strategy",
         "Predicted churners explained via SHAP TreeExplainer local feature attribution. "
         "Top positive SHAP contributors matched against behavioral persona rule sets — "
@@ -608,7 +524,17 @@ if "retention_result" in st.session_state:
                 )
                 priority_df = priority_df.sort_values("_ord").drop(columns="_ord")
                 st.dataframe(priority_df, width="stretch", hide_index=True)
-
+        
+        # top actions
+        st.markdown("**Top Recommended Actions**")
+        by_action = summary.get("by_action", {})
+        if by_action:
+            action_df = (
+                pd.DataFrame(list(by_action.items()), columns=["Action", "Count"])
+                .sort_values("Count", ascending=False)
+                .head(10)
+            )
+            st.dataframe(action_df, width="stretch", hide_index=True)
         # per-churner detail table
         if "churners" in result and result["churners"]:
             churners = result["churners"]
@@ -647,16 +573,93 @@ if "retention_result" in st.session_state:
                     width="stretch"
                 )
 
-                # top actions
-                st.markdown("**Top Recommended Actions**")
-                by_action = summary.get("by_action", {})
-                if by_action:
-                    action_df = (
-                        pd.DataFrame(list(by_action.items()), columns=["Action", "Count"])
-                        .sort_values("Count", ascending=False)
-                        .head(10)
-                    )
-                    st.dataframe(action_df, width="stretch", hide_index=True)
+
+# ═══════════════════════════════════════════════════════════════
+# SECTION 03 — BUSINESS IMPACT
+# ═══════════════════════════════════════════════════════════════
+if run_business:
+    n_s, f, ok = get_request_params()
+    if ok:
+        with st.spinner("Running business impact analysis..."):
+            if f:
+                result, err = call_api("/business/upload", files={"file": f}, output="full")
+            else:
+                result, err = call_api("/business/test", n_samples=n_s, output="full")
+        if err:
+            st.error(err)
+        elif result:
+            st.session_state["business_result"] = result
+
+if "business_result" in st.session_state:
+    result = st.session_state["business_result"]
+
+    section_header(
+        "03",
+        "Business Impact",
+        "Impact computed against ground-truth labels using LTV-weighted metrics across all LTV segments. "
+        "Retention savings estimated using segment-specific success rates — VIP/IMP receive higher-touch "
+        "interventions with stronger retention likelihood. Expected financial risk weights predicted churn "
+        "probability against LTV, incorporating model confidence directly into the business exposure figure."
+    )
+
+    if "error" in result:
+        st.error(result["error"])
+    elif "business_impact" in result:
+        per_seg = result["business_impact"].get("per_segment", {})
+
+        total_exposure = sum(v.get("total_churn_exposure", 0) for v in per_seg.values())
+        total_at_risk  = sum(v.get("revenue_at_risk", 0)      for v in per_seg.values())
+        total_savings  = sum(v.get("retention_savings", 0)    for v in per_seg.values())
+        total_missed   = sum(v.get("missed_revenue", 0)       for v in per_seg.values())
+        avg_capture    = (
+            sum(v.get("churn_capture_rate", 0) for v in per_seg.values()) / len(per_seg)
+            if per_seg else 0
+        )
+
+        metric_row(
+            metric_card_html("Total Churn Exposure", f"${total_exposure:,.0f}",
+                             "actual churner LTV pool"),
+            metric_card_html("Revenue at Risk",      f"${total_at_risk:,.0f}",
+                             "correctly identified churners"),
+            metric_card_html("Retention Savings",    f"${total_savings:,.0f}",
+                             "@ 70% success rate"),
+            metric_card_html("Missed Revenue",       f"${total_missed:,.0f}",
+                             "false negatives"),
+            metric_card_html("Avg Capture Rate",     f"{avg_capture:.1%}",
+                             "LTV-weighted across segments"),
+        )
+
+        if per_seg:
+            seg_rows = []
+            for seg, v in per_seg.items():
+                seg_rows.append({
+                    "Segment":           seg,
+                    "Retention Rate":    f"{v.get('retention_rate', 0):.0%}",
+                    "Churners Found":    v.get("churners_identified"),
+                    "Missed":            v.get("missed_churners"),
+                    "Capture Rate":      f"{v.get('churn_capture_rate', 0):.1%}",
+                    "Revenue at Risk":   f"${v.get('revenue_at_risk', 0):,.0f}",
+                    "Retention Savings": f"${v.get('retention_savings', 0):,.0f}",
+                    "Missed Revenue":    f"${v.get('missed_revenue', 0):,.0f}",
+                    "Expected Risk":     f"${v.get('expected_financial_risk', 0):,.0f}",
+                    "Total Exposure":    f"${v.get('total_churn_exposure', 0):,.0f}",
+                })
+            st.dataframe(
+                pd.DataFrame(seg_rows).set_index("Segment"),
+                width="stretch"
+            )
+
+        # per-customer detail
+        if "predictions" in result:
+            with st.expander(f"↓ Per-customer predictions ({len(result['predictions'])} rows)"):
+                pred_df = pd.DataFrame(result["predictions"])
+                display_cols = [c for c in
+                    ["segment", "churn_probability", "predicted_churn", "actual_churn"]
+                    if c in pred_df.columns]
+                n_show = st.slider("Rows", 10, min(500, len(pred_df)), 10, key="b_rows")
+                st.dataframe(pred_df[display_cols].head(n_show), width="stretch")
+
+st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # FOOTER
