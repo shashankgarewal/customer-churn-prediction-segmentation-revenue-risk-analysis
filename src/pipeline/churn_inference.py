@@ -133,8 +133,8 @@ def _prepare_inference_data(
 
         df_inference_ready = pd.read_parquet(processed_test_file)
         logging.info(f"INFERENCE_DATA: load system test data from [{processed_test_file}]")
-        if n_samples and n_samples < len(df):
-            df = df.sample(n=n_samples)
+        if n_samples and n_samples < len(df_inference_ready):
+            df_inference_ready = df_inference_ready.sample(n=n_samples, random_state=42)
             logging.info("INFERENCE_DATA: Sampled %d rows from test set", n_samples)
             
         X_test = df_inference_ready.drop(columns=[TARGET])
@@ -204,7 +204,7 @@ def model_inference(
         result["predictions"] = predictions_df.to_dict(orient="records")
         if data is None:
                 result['data'] = X_test.to_dict(orient="records")
-                result['label'] = y_test.to_dict(orient="records")
+                result['label'] = y_test.to_dict()
 
     logging.info("MODEL_INFERENCE: evaluation complete, output=%s", output)
     return result
