@@ -10,7 +10,14 @@ from sklearn.metrics import (
 )
 
 TARGET = 'Churned'
-RETENTION_RATE = 0.7 # out of 100 - 70 customer stays after intervention
+RETENTION_RATES = {
+    "VIP":    0.85,
+    "IMP":    0.80,
+    "High":   0.75,
+    "Medium": 0.65,
+    "Low":    0.50,
+    "No_VALUE": 0.30,
+} # segment based retention rate
 THRESHOLDS = {
     'VIP': [4400, 0.18],
     'IMP': [2600, 0.2],
@@ -175,7 +182,8 @@ def evaluate_impact(X_test, y_test, y_prob, y_pred, segments) -> dict:
         total_churn_exposure    = round(float(seg_df[seg_df[TARGET] == 1]['Lifetime_Value'].sum()), 2)
         revenue_at_risk         = round(float(tp_df['Lifetime_Value'].sum()), 2)
         missed_revenue          = round(float(fn_df['Lifetime_Value'].sum()), 2)
-        retention_savings       = round(revenue_at_risk * RETENTION_RATE, 2)
+        retention_rate          = RETENTION_RATES.get(seg, 0.70)
+        retention_savings       = round(revenue_at_risk * retention_rate, 2)
         
         expected_financial_risk = round(float(
             (all_predicted_churners['Lifetime_Value'] * all_predicted_churners['Prob']).sum()
@@ -188,6 +196,7 @@ def evaluate_impact(X_test, y_test, y_prob, y_pred, segments) -> dict:
         per_segment[seg] = {
             "total_churn_exposure":    total_churn_exposure,
             "revenue_at_risk":         revenue_at_risk,
+            "retention_rate":          retention_rate,
             "retention_savings":       retention_savings,
             "missed_revenue":          missed_revenue,
             "expected_financial_risk": expected_financial_risk,
