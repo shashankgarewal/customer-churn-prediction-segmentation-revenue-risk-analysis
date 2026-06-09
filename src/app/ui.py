@@ -413,11 +413,11 @@ if "model_result" in st.session_state:
         "01",
         "Model Performance",
         "<ul style='margin:0.4rem 0 0 1rem; padding:0; line-height:1.8'>"
-        "<li>CatBoost was selected for inference after Bayesian-optimized hyperparameter tuning across five model families.</li>"
+        "<li>Selected CatBoost for final inference after utilizing Bayesian optimization to tune hyperparameters across five model families, minimizing negative log loss.</li>"
         "<li>Classify customer churn using segment-specific probability thresholds rather than a single global cutoff.</li>" 
         "<li>Each LTV tier operates at its own decision boundary - a VIP customer flagged at 45% churn probability carries more business weight than a Low-value customer at 55%, and the model is built to reflect that principal.</li>"
         
-        "The system correctly capture 99% customers who are likely to churn on the highest-value segments {vip, imp}. "
+        "The model correctly identifies 8 in 10 customers likely to churn, with strongest accuracy on the highest-value segments."
     )
 
     if "error" in result:
@@ -524,6 +524,14 @@ if "retention_result" in st.session_state:
         
         "Instead of a generic intervention, each at-risk customer receives a tailored action — a frustrated VIP gets account manager outreach, a price-sensitive medium customer gets a promotional campaign."
     )
+
+    st.info("""
+    **⚠️ Return Rate & Service Calls — A Counterintuitive Signal**
+
+    Global SHAP analysis shows higher return rates and more service calls correlate with lower churn probability — engaged customers who complain are less likely to leave than those who disengage silently. 
+    
+    Platforms that penalize high-return customers through return fees, account restrictions, or stringent return approval risk converting low-churn-risk customers into churners through their own policy. Any **intervention triggered by return attribute** should also account the reason behind returns, **not just the return rate**.
+    """)
     
     if "error" in result:
         st.error(result["error"])
@@ -736,7 +744,7 @@ if "business_result" in st.session_state:
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 st.markdown("""
 <div style="font-size:0.7rem; color:#b0a898; text-align:center; padding: 0.5rem 0 1rem 0;">
-    Ecom Churn Prediction &amp; Retention Intelligence Engine &nbsp;·&nbsp;
+    Churn Intelligence Engine &nbsp;·&nbsp;
     Built by <span style="color:#c0785a; font-weight:600;">Shashank Garewal</span> &nbsp;·&nbsp;
     CatBoost · SHAP · MLflow · Optuna · FastAPI · Streamlit
 </div>
