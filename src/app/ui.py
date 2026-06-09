@@ -1,14 +1,16 @@
 import streamlit as st
 import pandas as pd
 import requests
+import plotly.express as px
+import plotly.graph_objects as go
 
 API_BASE = "http://localhost:8000"
 
 st.set_page_config(
-    page_title="Ecom Churn Prediction & Retention Intelligence Engine",
+    page_title="Churn Intel",
     page_icon="📉",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded" 
 )
 
 # ─────────────────────────────────────────────
@@ -52,12 +54,27 @@ h1, h2, h3, h4 { font-family: 'Jost', sans-serif !important; }
     line-height: 1.3 !important;
 }
 .page-title .byline {
-    font-size: 1.0rem;
+    font-size: 1rem;
     color: #6b6259;
     font-weight: 400;
     letter-spacing: 0.04em;
 }
 .page-title .byline span {
+    color: #c0785a;
+    font-weight: 600;
+}
+.project-desc {
+    font-size: 1.3rem;
+    color: #4a4540;
+    margin-bottom: 0.6rem;
+    line-height: 1.5;
+}
+.byline {
+    font-size: 0.75rem;
+    color: #6b6259;
+    letter-spacing: 0.03em;
+}
+.byline span {
     color: #c0785a;
     font-weight: 600;
 }
@@ -147,7 +164,7 @@ h1, h2, h3, h4 { font-family: 'Jost', sans-serif !important; }
 }
 .sidebar-logo span { color: #c0785a; }
 .sidebar-tagline {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     color: #6b6259;
     margin-bottom: 1.2rem;
 }
@@ -280,7 +297,7 @@ def call_api(endpoint, files=None, n_samples=None, output="full"):
         resp.raise_for_status()
         return resp.json(), None
     except requests.exceptions.ConnectionError:
-        return None, "Cannot connect to API. Run: `uvicorn src.app.api:app --reload`"
+        return None, "Cannot connect to API. Contact developer for troubleshoot."
     except Exception as e:
         return None, str(e)
 
@@ -299,7 +316,7 @@ def get_request_params():
 # ─────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div class="sidebar-logo">📉 Churn <span>Intel</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-tagline">Prediction · Explainability · Retention · Business</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-tagline"> Churn Prediction · Persona Discovery · Retention Decision · Business Impact </div>', unsafe_allow_html=True)
     st.markdown("---")
 
     st.markdown("**Data Source**")
@@ -328,6 +345,7 @@ with st.sidebar:
     run_business  = st.button("03 · Business Impact")
 
     st.markdown("---")
+    st.markdown("**Technical Details**")
     st.markdown("""
     <div class="sidebar-info">
     <b>Model</b><br>
@@ -354,16 +372,23 @@ with st.sidebar:
 # ─────────────────────────────────────────────
 st.markdown("""
 <div class="page-title">
-    <h1>Ecom Churn Intelligence Engine</h1>
-    <div class="byline">
-        Built by <span>Shashank Garewal</span> &nbsp;·&nbsp;
-        LTV-Segmented Classification &nbsp;·&nbsp;
-        SHAP-driven Contribution &nbsp;·&nbsp;
-        Segment-Aware Retention Strategy
+    <h1> Churn Intelligence Engine</h1>
+    <div class="project-desc">
+        Predicting customer churn, determine customer persona using SHAP importance, recommending targeted retention actions, and identifying revenue risk.
     </div>
 </div>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+    <div class="page-title">
+        <div class="byline">
+            Built by <span>Shashank Garewal</span> &nbsp;·&nbsp;
+            LTV-Segmented Churn Prediction &nbsp;·&nbsp;
+            SHAP-Based Persona Discovery &nbsp;·&nbsp;
+            Segment-Aware Retention Strategy
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════
 # SECTION 01 — MODEL METRICS
@@ -387,10 +412,12 @@ if "model_result" in st.session_state:
     section_header(
         "01",
         "Model Performance",
-        "CatBoost selected via Bayesian-optimized Optuna tuning across 5 model families. "
-        "Evaluated using segment-specific probability thresholds — not a global 0.5 — "
-        "to reflect real business operating points per LTV tier. "
-        "Log Loss was the primary tuning metric; AP and ROC-AUC per segment drove final model selection."
+        "<ul style='margin:0.4rem 0 0 1rem; padding:0; line-height:1.8'>"
+        "<li>CatBoost was selected for inference after Bayesian-optimized hyperparameter tuning across five model families.</li>"
+        "<li>Classify customer churn using segment-specific probability thresholds rather than a single global cutoff.</li>" 
+        "<li>Each LTV tier operates at its own decision boundary - a VIP customer flagged at 45% churn probability carries more business weight than a Low-value customer at 55%, and the model is built to reflect that principal.</li>"
+        
+        "The system correctly capture 99% customers who are likely to churn on the highest-value segments {vip, imp}. "
     )
 
     if "error" in result:
@@ -441,6 +468,21 @@ if "model_result" in st.session_state:
                 width="stretch"
             )
 
+            fig1 = px.bar(
+                pd.DataFrame(seg_rows),
+                x="Segment",
+                y=["Precision", "Recall", "F1"],
+                barmode="group",
+                color_discrete_map={"Precision": "#c0785a", "Recall": "#b0a898", "F1": "#6b6259"}
+            )
+            fig1.update_layout(
+                plot_bgcolor="#faf9f7", paper_bgcolor="#faf9f7", font_color="#2a2520", font_family="Jost",
+                yaxis_range=[0, 1], showlegend=True, xaxis_title=None, yaxis_title=None
+            )
+            fig1.update_xaxes(gridcolor="#c4baae")
+            fig1.update_yaxes(gridcolor="#c4baae")
+            st.plotly_chart(fig1, use_container_width=True)
+
         if "predictions" in result:
             with st.expander(f"↓ Per-customer predictions ({len(result['predictions'])} rows)"):
                 pred_df = pd.DataFrame(result["predictions"])
@@ -451,9 +493,6 @@ if "model_result" in st.session_state:
                 st.dataframe(pred_df[display_cols].head(n_show), width="stretch")
 
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
-
-
-
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -478,12 +517,14 @@ if "retention_result" in st.session_state:
     section_header(
         "02",
         "Retention Strategy",
-        "Predicted churners explained via SHAP TreeExplainer local feature attribution. "
-        "Top positive SHAP contributors matched against behavioral persona rule sets — "
-        "Dormant, Disengaged, Frustrated, Price Sensitive. "
-        "Segment × persona combination determines intervention priority and recommended campaign actions."
+        "<ul style='margin:0.4rem 0 0 1rem; padding:0; line-height:1.8'>"
+        "<li>For each predicted churner, positive SHAP contributions identify which behavioral signals are actively driving their churn risk. </li>"
+        "<li>Such signals are matched against behavioral persona rules — Dormant, Disengaged, Frustrated, Price Sensitive — to profile the type of churn risk.</li>" 
+        "<li>The segment and persona combination then maps to a targeted retention playbook with prioritized campaign actions.</li>"
+        
+        "Instead of a generic intervention, each at-risk customer receives a tailored action — a frustrated VIP gets account manager outreach, a price-sensitive medium customer gets a promotional campaign."
     )
-
+    
     if "error" in result:
         st.error(result["error"])
     elif "retention_summary" in result:
@@ -501,29 +542,25 @@ if "retention_result" in st.session_state:
             metric_card_html("Top Priority",  top_priority[0], f"{top_priority[1]} customers"),
         )
 
-        col_l, col_r = st.columns(2)
-
-        with col_l:
-            st.markdown("**By Persona**")
-            if by_persona:
-                persona_df = (
-                    pd.DataFrame(list(by_persona.items()), columns=["Persona", "Count"])
-                    .sort_values("Count", ascending=False)
-                )
-                st.dataframe(persona_df, width="stretch", hide_index=True)
-
-        with col_r:
-            st.markdown("**By Priority**")
-            if by_priority:
-                priority_order = ["Critical", "High", "Medium", "Low", "Minimal"]
-                priority_df = pd.DataFrame(
-                    list(by_priority.items()), columns=["Priority", "Count"]
-                )
-                priority_df["_ord"] = priority_df["Priority"].apply(
-                    lambda x: priority_order.index(x) if x in priority_order else 99
-                )
-                priority_df = priority_df.sort_values("_ord").drop(columns="_ord")
-                st.dataframe(priority_df, width="stretch", hide_index=True)
+        if "churners" in result and result["churners"]:
+            churn_df = pd.DataFrame(result["churners"])
+            segment_order = ["VIP", "IMP", "High", "Medium", "Low"]
+            
+            ct = pd.crosstab(churn_df["segment"], churn_df["persona"])
+            ct = ct.reindex(segment_order).dropna(how='all').fillna(0)
+            
+            fig2 = px.bar(
+                ct,
+                labels={"value": "Count", "segment": "Segment", "persona": "Persona"},
+                color_discrete_sequence=["#c0785a", "#b0a898", "#6b6259", "#78a898", "#2a2520"]
+            )
+            fig2.update_layout(
+                plot_bgcolor="#faf9f7", paper_bgcolor="#faf9f7", font_color="#2a2520", font_family="Jost",
+                barmode="stack", showlegend=True, xaxis_title=None, yaxis_title=None
+            )
+            fig2.update_xaxes(gridcolor="#c4baae")
+            fig2.update_yaxes(gridcolor="#c4baae")
+            st.plotly_chart(fig2, use_container_width=True)
         
         # top actions
         st.markdown("**Top Recommended Actions**")
@@ -572,6 +609,7 @@ if "retention_result" in st.session_state:
                     churn_df[display_cols].head(n_show),
                     width="stretch"
                 )
+st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -596,10 +634,12 @@ if "business_result" in st.session_state:
     section_header(
         "03",
         "Business Impact",
-        "Impact computed against ground-truth labels using LTV-weighted metrics across all LTV segments. "
-        "Retention savings estimated using segment-specific success rates — VIP/IMP receive higher-touch "
-        "interventions with stronger retention likelihood. Expected financial risk weights predicted churn "
-        "probability against LTV, incorporating model confidence directly into the business exposure figure."
+        "<ul style='margin:0.4rem 0 0 1rem; padding:0; line-height:1.8'>"
+        "<li>Financial exposure is calculated using customer Lifetime Value weighted by churn probability and model confidence.</li>"
+        "<li>A predicted churners may still bring partial revenue even after leaving — probability-weighted risk makes a more honest exposure estimate than binary flags.</li>"
+        "<li>Retention savings use segment-specific success rates — VIP and IMP receive higher-touch interventions with stronger expected outcomes, reflected in their higher estimate.</li>"
+        "</ul>"
+        "This section answers the core question: if we act on these predictions, how much revenue do we protect — and what are we leaving on the table if we don't?"
     )
 
     if "error" in result:
@@ -622,7 +662,7 @@ if "business_result" in st.session_state:
             metric_card_html("Revenue at Risk",      f"${total_at_risk:,.0f}",
                              "correctly identified churners"),
             metric_card_html("Retention Savings",    f"${total_savings:,.0f}",
-                             "@ 70% success rate"),
+                             "Segment wise success rate"),
             metric_card_html("Missed Revenue",       f"${total_missed:,.0f}",
                              "false negatives"),
             metric_card_html("Avg Capture Rate",     f"{avg_capture:.1%}",
@@ -649,6 +689,36 @@ if "business_result" in st.session_state:
                 width="stretch"
             )
 
+            segment_order = ["VIP", "IMP", "High", "Medium", "Low"]
+            biz_data = []
+            for seg in segment_order:
+                if seg in per_seg:
+                    v = per_seg[seg]
+                    biz_data.append({
+                        "Segment": seg,
+                        "Retention Savings": v.get("retention_savings", 0),
+                        "Revenue Not Saved - Uncertain": v.get("revenue_at_risk", 0) - v.get("retention_savings", 0),
+                        "Missed Revenue": v.get("missed_revenue", 0)
+                    })
+            if biz_data:
+                fig3 = px.bar(
+                    pd.DataFrame(biz_data),
+                    x="Segment",
+                    y=["Retention Savings", "Revenue Not Saved - Uncertain", "Missed Revenue"],
+                    color_discrete_map={
+                        "Retention Savings":"#78a898",  # green-teal — saved
+                        "Revenue Not Saved - Uncertain": "#c0785a",  # terracotta — uncertain
+                        "Missed Revenue":"#b0a898"   # muted — lost
+                    }
+                )
+                fig3.update_layout(
+                    plot_bgcolor="#faf9f7", paper_bgcolor="#faf9f7", font_color="#2a2520", font_family="Jost",
+                    barmode="stack", showlegend=True, xaxis_title=None, yaxis_title="USD"
+                )
+                fig3.update_xaxes(gridcolor="#c4baae")
+                fig3.update_yaxes(gridcolor="#c4baae")
+                st.plotly_chart(fig3, use_container_width=True)
+
         # per-customer detail
         if "predictions" in result:
             with st.expander(f"↓ Per-customer predictions ({len(result['predictions'])} rows)"):
@@ -659,7 +729,6 @@ if "business_result" in st.session_state:
                 n_show = st.slider("Rows", 10, min(500, len(pred_df)), 10, key="b_rows")
                 st.dataframe(pred_df[display_cols].head(n_show), width="stretch")
 
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # FOOTER
