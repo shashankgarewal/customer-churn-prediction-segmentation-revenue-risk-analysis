@@ -12,10 +12,16 @@ script/
 scripts/
 
 # data and artifacts
-data/
+data/raw/
+data/preprocess/
+data/interim/
+data/processed/
 artifacts/powerbi/
 logs/
 
+!data/interim/transformed/
+!data/interim/transformed/test.parquet
+!data/processed/test.parquet
 
 # Local Python Environment & Caches
 venv/
