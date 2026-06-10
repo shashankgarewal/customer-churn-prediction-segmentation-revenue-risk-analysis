@@ -374,7 +374,7 @@ st.markdown("""
 <div class="page-title">
     <h1> Churn Intelligence Engine</h1>
     <div class="project-desc">
-        Predicting customer churn, determine customer persona using SHAP importance, recommending targeted retention actions, and identifying revenue risk.
+        Predicting customer churn, determining customer persona through SHAP importance, recommending targeted retention actions, and identifying revenue risk.
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -463,25 +463,46 @@ if "model_result" in st.session_state:
                     "TP": v.get("tp"), "FP": v.get("fp"),
                     "FN": v.get("fn"), "TN": v.get("tn"),
                 })
+
+            df_seg = pd.DataFrame(seg_rows)
+            
+            df_melted = df_seg.melt(
+                id_vars=["Segment"], 
+                value_vars=["Precision", "Recall", "F1"], 
+                var_name="Metric", 
+                value_name="Value"
+            )
+
+            # Enforce business hierarchy on X-axis
+            segment_order = ["VIP", "IMP", "High", "Medium", "Low"]
+
+            # 2. Build the Line Chart
+            fig1 = px.line(
+                df_melted,
+                x="Segment",
+                y="Value",
+                color="Metric",
+                markers=True,
+                category_orders={"Segment": segment_order},
+                color_discrete_map={"Precision": "#c0785a", "Recall": "#78a898", "F1": "#6b6259"}
+            )
+
+            # Style lines and markers to match your premium aesthetic
+            fig1.update_traces(line=dict(width=3), marker=dict(size=10))
+            fig1.update_layout(
+                plot_bgcolor="#faf9f7", paper_bgcolor="#faf9f7", font_color="#2a2520", font_family="Jost",
+                yaxis_range=[0, 1.05], showlegend=True, xaxis_title=None, yaxis_title="Score"
+            )
+            fig1.update_xaxes(gridcolor="#c4baae")
+            fig1.update_yaxes(gridcolor="#c4baae")
+
+            # Render Chart First
+            st.plotly_chart(fig1, use_container_width=True)
+            
             st.dataframe(
                 pd.DataFrame(seg_rows).set_index("Segment"),
                 width="stretch"
             )
-
-            fig1 = px.bar(
-                pd.DataFrame(seg_rows),
-                x="Segment",
-                y=["Precision", "Recall", "F1"],
-                barmode="group",
-                color_discrete_map={"Precision": "#c0785a", "Recall": "#b0a898", "F1": "#6b6259"}
-            )
-            fig1.update_layout(
-                plot_bgcolor="#faf9f7", paper_bgcolor="#faf9f7", font_color="#2a2520", font_family="Jost",
-                yaxis_range=[0, 1], showlegend=True, xaxis_title=None, yaxis_title=None
-            )
-            fig1.update_xaxes(gridcolor="#c4baae")
-            fig1.update_yaxes(gridcolor="#c4baae")
-            st.plotly_chart(fig1, use_container_width=True)
 
         if "predictions" in result:
             with st.expander(f"↓ Per-customer predictions ({len(result['predictions'])} rows)"):
@@ -526,11 +547,17 @@ if "retention_result" in st.session_state:
     )
 
     st.info("""
-    **⚠️ Return Rate & Service Calls — A Counterintuitive Signal**
+    **Return Rate vs. Service Calls — Two Distinct Behavioral Signals**
 
-    Global SHAP analysis shows higher return rates and more service calls correlate with lower churn probability — engaged customers who complain are less likely to leave than those who disengage silently. 
-    
-    Platforms that penalize high-return customers through return fees, account restrictions, or stringent return approval risk converting low-churn-risk customers into churners through their own policy. Any **intervention triggered by return attribute** should also account the reason behind returns, **not just the return rate**.
+    Global SHAP analysis reveals an important distinction between these two behavioral features:
+
+    * **Customer Service Calls (Retention Signal):** Higher support calls correlate with **lower** churn probability. Customers who reach out are actively engaged; their issues are likely being resolved, preventing them from leaving quietly.
+    * **High Return Rates (Friction Signal):** Higher return rates correlate with **higher** churn probability. Unlike support calls, returns reflect direct product dissatisfaction or unmet expectations rather than positive engagement.
+
+    ---
+
+    **Strategic Business Rule:**
+    Platforms that penalize high-return customers through fees, strict return approval, or enforcing account restriction risk accelerating churn in a group that is already structurally at risk. **Any operational intervention triggered by return behavior must account for the underlying reason behind the returns, not just the raw rate.**
     """)
     
     if "error" in result:
