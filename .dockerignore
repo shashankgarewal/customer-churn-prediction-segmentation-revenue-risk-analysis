@@ -1,0 +1,34 @@
+# Version Control
+.git
+.gitattributes
+.gitignore
+.github/
+
+# Documentation
+README.md
+docs/
+notebooks/
+script/
+scripts/
+
+# data and artifacts
+data/
+artifacts/powerbi/
+logs/
+
+
+# Local Python Environment & Caches
+venv/
+.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs (Highly recommended to keep images light)
+catboost_info/
+mlflow/
+
+# IDE settings
+.vscode/
+.idea/
