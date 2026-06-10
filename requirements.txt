@@ -12,3 +12,6 @@ lightgbm
 optuna
 pyyaml
 plotly
+shap
+python-multipart
+streamlit
