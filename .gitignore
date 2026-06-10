@@ -13,6 +13,7 @@ __pycache__/
 
 # local packages and artifacts
 *.egg
+*.egg-info/
 logs/
 mlflow/artifacts/
 catboost_info/
