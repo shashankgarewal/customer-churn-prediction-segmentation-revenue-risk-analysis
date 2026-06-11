@@ -26,8 +26,8 @@ COPY data/interim/transformed/test.parquet ./data/interim/transformed/test.parqu
 COPY data/processed/test.parquet ./data/processed/test.parquet
 
 # expose fastapi and streamlit port
-EXPOSE 8000 8501
+EXPOSE 8501
 
 # Run API in background, then run UI in foreground
-CMD uvicorn src.app.api:app --host 0.0.0.0 --port 8000 & \
+CMD uvicorn src.app.api:app --host 127.0.0.1 --port 8000 & \
     python -m streamlit run src/app/ui.py --server.port 8501 --server.address 0.0.0.0
