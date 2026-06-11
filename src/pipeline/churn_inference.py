@@ -48,6 +48,10 @@ def _get_model():
     
     try:
         """Get 'best' model from MLflow model registry."""
+        if not tracking_db.exists():
+            # When db not present, mlflowclient won't build new db
+            raise FileNotFoundError(f"MLflow tracking DB not found at {tracking_db}")
+
         client = MlflowClient()
         model_version = client.get_model_version_by_alias(MODEL_NAME, ALIAS)
         run = client.get_run(model_version.run_id)
