@@ -1,0 +1,266 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Jost:wght@300;400;500;600;700&display=swap');
+
+/* ── Hide native Streamlit chrome ── */
+header[data-testid="stHeader"]         { display: none !important; }
+#MainMenu                               { display: none !important; }
+footer                                  { display: none !important; }
+[data-testid="stToolbar"]              { display: none !important; }
+[data-testid="stDecoration"]           { display: none !important; }
+
+/* ── Base ── */
+html, body, [class*="css"], .stApp {
+    font-family: 'Jost', sans-serif !important;
+    background-color: #faf9f7 !important;
+    color: #2a2520 !important;
+}
+h1, h2, h3, h4 { font-family: 'Jost', sans-serif !important; }
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background-color: #2a2520 !important;
+    border-right: none !important;
+}
+[data-testid="stSidebar"] * { color: #faf9f7 !important; }
+[data-testid="stSidebar"] .stRadio label    { font-size: 0.9rem !important; }
+[data-testid="stSidebar"] .stCheckbox label { font-size: 0.9rem !important; }
+[data-testid="stSidebar"] .stNumberInput input {
+    background-color: #3a302a !important;
+    color: #faf9f7 !important;
+    border: 1px solid #6b6259 !important;
+    border-radius: 2px !important;
+}
+[data-testid="stSidebar"] .stNumberInput input:focus {
+    border-color: #c0785a !important;
+    outline: none !important;
+}
+/* ── Remove Top White Space ── */
+[data-testid="stAppViewBlockContainer"] {
+    padding-top: 1rem !important; /* Adjust this to 0rem if you want it completely flush */
+    padding-bottom: 1rem !important;
+}
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+/* ── Page header ── */
+.page-header {
+    padding: 1.2rem 0 1rem 0;
+    border-bottom: 2px solid #c0785a;
+    margin-bottom: 1.8rem;
+}
+.page-header h1 {
+    font-size: 2.6rem !important;
+    font-weight: 700 !important;
+    color: #2a2520 !important;
+    margin: 0 0 0.3rem 0 !important;
+    line-height: 1.2 !important;
+}
+.page-header .project-desc {
+    font-size: 1.05rem;
+    color: #4a4540;
+    margin: 0.3rem 0 0.5rem 0;
+    line-height: 1.5;
+}
+.page-header .byline {
+    font-size: 1.1rem;
+    color: #6b6259;
+    letter-spacing: 0em;
+    
+    /* Converts the container into a row layout */
+    display: flex;
+    justify-content: space-between;
+    align-items: center; 
+    flex-wrap: wrap; /* Prevents breaking on smaller screens */
+    gap: 1rem;
+}
+.page-header .byline span {
+    color: #c0785a;
+    font-weight: 600;
+}
+
+/* ── Section blocks ── */
+.section-block {
+    background: #ffffff;
+    border: 1px solid #c4baae;
+    border-top: 3px solid #c0785a;
+    border-radius: 3px;
+    padding: 1.4rem 1.6rem;
+    margin: 1.5rem 0 1rem 0;
+}
+.section-num {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #c0785a;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+}
+.section-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #2a2520;
+    margin: 0 0 0.7rem 0;
+}
+.section-desc {
+    font-family: 'Lora', serif;
+    font-size: 0.92rem;
+    color: #4a4540;
+    line-height: 1.7;
+    margin: 0;
+}
+.section-desc ul {
+    margin: 0.3rem 0 0.6rem 1.1rem;
+    padding: 0;
+}
+.section-desc li { margin-bottom: 0.25rem; }
+.section-insight {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #c0785a;
+    border-top: 1px solid #e8e0d8;
+    margin-top: 0.8rem;
+    padding-top: 0.6rem;
+}
+
+/* ── Metric cards ── */
+.metric-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1.2rem 0; }
+.metric-card {
+    flex: 1;
+    min-width: 160px;
+    background: #ffffff;
+    border: 1px solid #c4baae;
+    border-left: 3px solid #c0785a;
+    padding: 0.9rem 1.1rem;
+    border-radius: 2px;
+}
+.metric-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #6b6259;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.3rem;
+}
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2a2520;
+    line-height: 1.1;
+}
+.metric-sub {
+    font-size: 0.72rem;
+    color: #b0a898;
+    margin-top: 0.2rem;
+}
+
+/* ── Divider ── */
+.divider { border: none; border-top: 1px solid #c4baae; margin: 1.5rem 0; }
+
+/* ── Sidebar chrome ── */
+.sidebar-logo     { font-size: 1.05rem; font-weight: 700; color: #faf9f7; margin-bottom: 0.15rem; }
+.sidebar-logo span { color: #c0785a; }
+.sidebar-tagline  { font-size: 0.68rem; color: #6b6259; margin-bottom: 1rem; line-height: 1.6; }
+.sidebar-info     { font-size: 0.78rem; color: #b0a898; line-height: 1.85; }
+.sidebar-info b   { color: #c0785a; font-weight: 600; }
+
+/* ── Buttons ── */
+.stButton > button {
+    background: #faf9f7 !important;
+    color: #2a2520 !important;
+    border: 1.5px solid #c0785a !important;
+    border-radius: 2px !important;
+    font-family: 'Jost', sans-serif !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.05em !important;
+    padding: 0.45rem 1rem !important;
+    width: 100%;
+}
+.stButton > button:hover { background: #c0785a !important; color: #faf9f7 !important; }
+[data-testid="stSidebar"] .stButton > button {
+    background: #2a2520 !important;
+    color: #faf9f7 !important;
+    border-color: #c0785a !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: #c0785a !important; color: #2a2520 !important;
+}
+
+/* ── Expander ── */
+.streamlit-expanderHeader {
+    font-family: 'Jost', sans-serif !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: #2a2520 !important;
+    background: #f0ede8 !important;
+    border: 1px solid #c4baae !important;
+    border-radius: 2px !important;
+}
+.streamlit-expanderHeader:hover,
+.streamlit-expanderHeader[aria-expanded="true"] {
+    background: #c0785a !important; color: #ffffff !important;
+}
+
+/* ── Tables ── */
+[data-testid="stDataFrame"] { border: 1px solid #c4baae !important; }
+
+/* ── Alerts ── */
+.stAlert {
+    background: #f5f0e8 !important;
+    border: 1px solid #c4baae !important;
+    border-left: 3px solid #c0785a !important;
+    font-size: 0.82rem !important;
+}
+
+/* ── LinkedIn Link Styling ── */
+.linkedin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    text-decoration: none !important;
+    color: inherit !important; /* Inherits the default grey text */
+    vertical-align: middle;
+}
+
+/* Base name accent color */
+.linkedin-link span {
+    color: #c0785a !important;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+/* Icon starts grey, transitions to LinkedIn Blue on hover */
+.linkedin-icon {
+    color: #6b6259; 
+    transition: color 0.2s ease;
+    margin-bottom: 2px; /* Precision alignment with text */
+}
+
+.linkedin-link:hover .linkedin-icon {
+    color: #0077b5 !important; /* Official LinkedIn Blue */
+}
+
+.linkedin-link:hover span {
+    color: #0077b5 !important; /* Name switches color on hover too for better UX feedback */
+}
+
+/* ── GitHub Link Styling ── */
+.github-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #6b6259 !important;
+    text-decoration: none !important;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.github-link:hover {
+    color: #c0785a !important; /* Highlights with your theme accent on hover */
+}
+
+.github-icon {
+    vertical-align: middle;
+}
