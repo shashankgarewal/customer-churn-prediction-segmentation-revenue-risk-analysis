@@ -1,4 +1,12 @@
+# Customer Churn Prediction, Segmentation & Revenue Risk Analysis
 
+An end-to-end machine learning system that predicts customer churn, identifies behavioral personas through SHAP-based driver analysis, recommends segment-specific retention strategies, and quantifies the financial exposure of predicted churn across LTV tiers.
+
+Built to demonstrate how ML moves beyond accuracy metrics — from model output to business decision.
+
+> From churn signal to retention action — before revenue walks out the door.
+
+---
 
 ## Business Problem:
 A mid-sized e-commerce business raised a concern: customers are leaving, and the team has no early warning system to identify who is at risk before it's too late.
@@ -69,6 +77,16 @@ A classification model will be developed to flag customers at risk of leaving, p
   **Learning:** Global AUC can look acceptable while the model is effectively failing on the segment that matters most (e.g. High/Premium customers). Aggregate metrics should never be the sole basis for model selection on segmented business problems.
 
   **Solution:** Compute ROC-AUC and Average Precision Score **per LTV segment** as secondary metrics alongside a threshold-independent primary metric (Log Loss) — exposing per-group model confidence without being tied to any single operating threshold.
+
+* **The double-influence problem with LTV** — using Lifetime Value both as a sample weight and as a top input feature creates a feedback loop where the model's segment-level behavior is shaped twice by the same signal. The feature teaches the model what LTV means; the weight then amplifies its influence on the loss function.
+
+  **Learning:** When a feature is also used to weight training examples, validate that the model is learning behavioral patterns — not just optimizing toward the weight signal itself.
+
+* **SHAP for persona discovery, not explainability** — most churn projects use SHAP to answer "why did the model predict churn for this customer?" This project uses it differently: positive SHAP contributions identify which behavioral signals are actively driving churn risk, and those signals are matched against persona rules to classify the *type* of churn risk. The persona system — not the SHAP plot — is what drives the retention decision.
+
+  **Learning:** SHAP's local attribution values are a rich behavioral signal in their own right, not just a model debugging tool.
+
+---
   
 ## Tech Stack:
 * **Great Expectations**: Schema enforcement, data profiling, and pipeline data validation.
@@ -128,7 +146,13 @@ Executes model prediction, business impact analysis, and SHAP-based retention st
 python -m src.pipeline.churn_inference
 ```
 
-### 3. Reset Experiment
+### 3. SHAP Explainability
+Shows SHAP global mean values and distributions
+```bash
+python -m script.shap_global_importance
+```
+
+### 4. Reset Experiment (Optional)
 Wipes all MLflow metadata and local artifacts for a clean start.
 ```bash
 python -m script.reset_experiment --name churn-training-pipeline
@@ -185,13 +209,29 @@ Medium segment shows consistently weaker performance (AP ~0.81) across all model
 
 This reflects the underlying data reality — medium customers have a 17.4% churn rate vs 35–40% for high/low/IMP segments. Lower churn rate means fewer consistent positive examples, making the churn signal inherently noisier for this group. Not a modeling failure — a reflection of business behavior.
 
+---
+## Ethical Considerations
+
+**Return Rate and Service Calls: Two Different Behavioral Signals**
+
+Global SHAP analysis reveals an important distinction between two behavioral features that might appear similar on the surface.
+
+**Higher** customer **service calls** correlate with **lower churn** probability. Customers who reach out to support are actively engaged with the platform and less likely to leave silently. Contact is a retention signal, not a churn signal.
+
+**Higher return** rates correlate with **higher churn** probability. Unlike service calls, returns appear to reflect product dissatisfaction or fulfillment failures rather than engagement. Customers who return frequently are at slightly elevated churn risk.
+
+> E-commerce platforms that penalize high-return customers through return fees, account restrictions, or stringent claim reviews risk accelerating churn in an already at-risk group. A customer returning products due to platform-side failures (damaged goods, wrong items, fulfillment errors) is being penalized for the platform's mistake, which compounds the dissatisfaction already driving their churn risk.
+
+Return rates provide useful signals, but they should be interpreted alongside **return reasons**.
+
+---
+
 ## Future Steps and Approaches:
 * **Metric-driven Retention Strategy**: Currently, the retention strategy is static and rule-based campaign assigment. Future versions, similar to metric driven persona, can implement metric driven rentention strategies by employing feature importance, retention signals, and/or partial dependency to identify best plausible feature/approach for customer intervention.
+* **Campaign-Aware Retention Modeling:** Extend retention rate assumptions into a segment × persona × campaign matrix with per-campaign budget constraints and expected value optimization — moving from rule-based to ROI-maximizing intervention selection.
 * **Balance Class each Segment:** The medium ltv customer segment have low proportion of churn and consistently ml algorithms are weak at capturing them. Undersampling the non-churn class sample of medium ltv segment would allow model to capture pattern better while using log-loss as optimization metric.
 * **LTV-Weighted Modeling:** Currently, the model treats all customers as equally important. Future versions could use sample weights based on LTV so the model prioritizes high-value customers during training.
 * **Expected Loss Regression:** Move from simple classification to a regression approach that predicts "Expected Financial Loss" (LTV × Churn Probability). This would allow the business to rank customers by actual dollar risk.
 * **Continuous Retention Strategies:** Current LTV segments create "boundary problems" where a small difference in value (e.g., \$799 vs \$801) leads to a different strategy. We aim to move toward strategies that treat LTV as a continuous variable.
 * **Config-Driven Experiments:** Move hyperparameter search spaces and Optuna settings into YAML configuration files to make experiments easier to manage without changing the Python code. Also, tracking and logging the search space for each optuna study. 
 * **Automated Threshold Optimization:** Instead of picking probability thresholds based on intuition, use precision-recall curves and probability distributions to find the mathematically optimal threshold for each business segment.
-
-> Fix your business number when its affected by leaving customer. 
