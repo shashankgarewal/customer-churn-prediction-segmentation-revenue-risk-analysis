@@ -27,3 +27,19 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{secrets.GCP_SA_KEY}}
+
+      - name: Deploy Docker Image to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: churn-intelligence-engine
+          region: asia-south1
+          image: docker.io/${{ secrets.DOCKERHUB_USERNAME}}/${{github.event.repository.name}}:latest
+          flags: |
+            --port=8501
+            --memory=1Gi
+            --allow-unauthenticated
