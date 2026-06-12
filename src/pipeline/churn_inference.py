@@ -173,6 +173,7 @@ def model_inference(
         
     # per-customer predictions (always computed, conditionally returned)
     predictions_df = pd.DataFrame({
+        "customer_index":    y_prob.index,
         "churn_probability": y_prob.round(4),
         "predicted_churn":   y_pred,
         "segment":           segments
@@ -245,6 +246,7 @@ def business_inference(
     
     if output == "full":
         result["predictions"] = pd.DataFrame({
+            "customer_index":    y_prob.index,
             "churn_probability": y_prob.round(4),
             "predicted_churn":   y_pred,
             "segment":           segments,
@@ -297,6 +299,7 @@ def retention_inference(
         action  = recommend_action(seg, persona["primary_persona"])
 
         results.append({
+            "customer_index":        int(idx),
             "churn_probability":     round(float(prob_churners[idx]), 4),
             "segment":               seg,
             "top_churn_drivers":     drivers["top_churn_drivers"],

@@ -33,8 +33,8 @@ class PipelineArtifacts:
 
 def _save_split(train_df: pd.DataFrame, test_df: pd.DataFrame, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
-    train_df.to_parquet(output_dir / "train.parquet", index=False)
-    test_df.to_parquet(output_dir / "test.parquet", index=False)
+    train_df.to_parquet(output_dir / "train.parquet", index=True)
+    test_df.to_parquet(output_dir / "test.parquet", index=True)
     logging.info("PIPELINE_SAVE: saved train/test split to %s", output_dir)
 
 
