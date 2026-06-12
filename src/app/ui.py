@@ -119,7 +119,7 @@ with st.sidebar:
     <div class="sidebar-info">
     <b>Model</b><br>
     CatBoost · MLflow tracked<br>
-    Optuna · 45 trials · 2-phase tuning<br><br>
+    Optuna · 5 Studies · 2-phase tuning<br><br>x
     <b>Evaluation</b><br>
     Log Loss primary · AP + ROC per segment<br>
     Segment-specific thresholds<br><br>

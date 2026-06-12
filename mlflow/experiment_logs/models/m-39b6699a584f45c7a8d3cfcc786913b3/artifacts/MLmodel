@@ -1,0 +1,22 @@
+artifact_path: file:///E:/Projects/ecom-customer-behaviour/mlflow/experiment_logs/models/m-39b6699a584f45c7a8d3cfcc786913b3/artifacts
+flavors:
+  python_function:
+    data: model.ubj
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.xgboost
+    python_version: 3.12.2
+  xgboost:
+    code: null
+    data: model.ubj
+    model_class: xgboost.sklearn.XGBClassifier
+    model_format: ubj
+    xgb_version: 3.2.0
+mlflow_version: 3.12.0
+model_id: m-39b6699a584f45c7a8d3cfcc786913b3
+model_size_bytes: 3930291
+model_uuid: m-39b6699a584f45c7a8d3cfcc786913b3
+prompts: null
+run_id: 82867d065457480a912859e71f90504b
+utc_time_created: '2026-06-12 05:06:04.125712'

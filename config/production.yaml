@@ -68,7 +68,7 @@ retention:
     No_VALUE: 0.30
   thresholds:
     VIP: [4400, 0.18]
-    IMP: [2600, 0.2]
+    IMP: [2600, 0.25]
     High: [1800, 0.4]
     Medium: [800, 0.4]
     Low: [0, 0.55]

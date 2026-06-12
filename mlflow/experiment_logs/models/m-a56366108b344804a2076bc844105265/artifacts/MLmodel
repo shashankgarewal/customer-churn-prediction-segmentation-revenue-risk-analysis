@@ -18,5 +18,5 @@ model_id: m-a56366108b344804a2076bc844105265
 model_size_bytes: 3715552
 model_uuid: m-a56366108b344804a2076bc844105265
 prompts: null
-run_id: b0e7d3965d844b0890ef3690567703e4
+run_id: 
 utc_time_created: '2026-06-11 16:38:20.713090'

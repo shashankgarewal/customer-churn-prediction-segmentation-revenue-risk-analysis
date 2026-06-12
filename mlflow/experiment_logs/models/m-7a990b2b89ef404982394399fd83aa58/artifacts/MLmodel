@@ -1,4 +1,4 @@
-artifact_path: file:///E:/Projects/ecom-customer-behaviour/mlflow/experiment_logs/models/m-a56366108b344804a2076bc844105265/artifacts
+artifact_path: file:///E:/Projects/ecom-customer-behaviour/mlflow/experiment_logs/models/m-7a990b2b89ef404982394399fd83aa58/artifacts
 flavors:
   catboost:
     catboost_version: 1.2.10
@@ -14,9 +14,9 @@ flavors:
     loader_module: mlflow.catboost
     python_version: 3.12.2
 mlflow_version: 3.12.0
-model_id: m-a56366108b344804a2076bc844105265
-model_size_bytes: 3715552
-model_uuid: m-a56366108b344804a2076bc844105265
+model_id: m-7a990b2b89ef404982394399fd83aa58
+model_size_bytes: 2816548
+model_uuid: m-7a990b2b89ef404982394399fd83aa58
 prompts: null
-run_id: 
-utc_time_created: '2026-06-11 16:38:20.713090'
+run_id: fa1cbad0f0c647819a46d5fc912f7770
+utc_time_created: '2026-06-12 04:58:17.458442'
