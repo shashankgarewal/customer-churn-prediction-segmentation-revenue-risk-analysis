@@ -1,34 +1,6 @@
 from typing import Dict
 
-PERSONA_RULES = {
-    "Dormant Customer": [
-        "Days_Since_Last_Purchase",
-        "Login_Frequency",
-        "Credit_Balance"
-    ],
-
-    "Disengaged Customer": [
-        "Login_Frequency",
-        "Session_Duration_Avg",
-        "Pages_Per_Session",
-        "Email_Open_Rate",
-        "Mobile_App_Usage",
-        "Social_Media_Engagement_Score"
-    ],
-
-    "Price Sensitive Shopper": [
-        "Discount_Usage_Rate",
-        "Cart_Abandonment_Rate",
-        "Wishlist_Items",
-        "Average_Order_Value"
-    ],
-
-    "Frustrated Customer": [
-        "Returns_Rate",
-        "Customer_Service_Calls",
-        "Product_Reviews_Written"
-    ],
-}
+from src.utils.config import PERSONA_RULES
 
 
 # determine persona of customer using SHAP contribution values

@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import plotly.express as px
 from pathlib import Path
+import yaml
 
 from src.utils.common import get_project_root
 
@@ -15,7 +16,8 @@ with open(css_file) as f:
         unsafe_allow_html=True
     )
     
-API_BASE = "http://localhost:8000"
+# pyrefly: ignore [missing-import]
+from src.utils.config import API_BASE, SEGMENT_ORDER, BRAND_COLORS
 
 st.set_page_config(
     page_title="Churn Intel",
@@ -70,8 +72,7 @@ def get_request_params():
         return None, uploaded_file, True
     return n_samples, None, True
 
-SEGMENT_ORDER = ["VIP", "IMP", "High", "Medium", "Low"]
-BRAND_COLORS  = ["#c0785a", "#78a898", "#b0a898", "#6b6259", "#c4baae"]
+
 PLOTLY_BASE   = dict(plot_bgcolor="#faf9f7", paper_bgcolor="#faf9f7",
                      font_color="#2a2520", font_family="Jost",
                      showlegend=True, xaxis_title=None)

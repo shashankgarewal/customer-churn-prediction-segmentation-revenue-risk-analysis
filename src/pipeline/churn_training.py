@@ -15,9 +15,9 @@ from src.model.train_churn import build_model
 from src.utils.logger import logging
 
 
-TARGET = "Churned"
-DEFAULT_RAW_DATA_PATH = Path("data/raw/ecommerce_customer_churn_dataset.csv")
-DEFAULT_MODELS = ["randomforest", "xgboost", "hgboost", "catboost", "lightgbm"]
+from src.utils.config import TARGET, RAW_DATA_PATH, DEFAULT_MODELS
+DEFAULT_RAW_DATA_PATH = Path(RAW_DATA_PATH)
+
 
 
 @dataclass(frozen=True)

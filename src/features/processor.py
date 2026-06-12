@@ -6,7 +6,8 @@ from src.features.transform import (
     impute_missing_features,
 )
 
-TARGET = "Churned"
+from src.utils.config import TARGET
+
 
 def create_features(df: pd.DataFrame) -> pd.DataFrame:
     """Generates interaction features."""

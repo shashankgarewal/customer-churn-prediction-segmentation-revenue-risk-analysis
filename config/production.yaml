@@ -27,5 +27,135 @@ raw_data:
   - Signup_Quarter
   - Churned
 
-processed_data:
-  path: 
+pipeline:
+  target: "Churned"
+  default_models:
+  - "randomforest"
+  - "xgboost"
+  - "hgboost"
+  - "catboost"
+  - "lightgbm"
+
+model_registry:
+  model_name: "churn_model"
+  alias: "best"
+
+features:
+  low_cardinal_cols:
+  - "Gender"
+  - "Signup_Quarter"
+  - "Country"
+  mid_cardinal_cols:
+  - "City"
+  new_features:
+  - "Engagement_Score"
+  - "Purchase_Frequency"
+  - "LTV_Per_Purchase"
+
+data_preprocess:
+  train_size: 0.8
+  random_state: 42
+
+retention:
+  exclude_from_drivers:
+  - "Lifetime_Value"
+  retention_rates:
+    VIP: 0.85
+    IMP: 0.80
+    High: 0.75
+    Medium: 0.65
+    Low: 0.50
+    No_VALUE: 0.30
+  thresholds:
+    VIP: [4400, 0.18]
+    IMP: [2600, 0.2]
+    High: [1800, 0.4]
+    Medium: [800, 0.4]
+    Low: [0, 0.55]
+  persona_rules:
+    Dormant Customer:
+    - "Days_Since_Last_Purchase"
+    - "Login_Frequency"
+    - "Credit_Balance"
+    Disengaged Customer:
+    - "Login_Frequency"
+    - "Session_Duration_Avg"
+    - "Pages_Per_Session"
+    - "Email_Open_Rate"
+    - "Mobile_App_Usage"
+    - "Social_Media_Engagement_Score"
+    Price Sensitive Shopper:
+    - "Discount_Usage_Rate"
+    - "Cart_Abandonment_Rate"
+    - "Wishlist_Items"
+    - "Average_Order_Value"
+    Frustrated Customer:
+    - "Returns_Rate"
+    - "Customer_Service_Calls"
+    - "Product_Reviews_Written"
+  action_playbook:
+    Dormant Customer:
+      VIP:
+      - "VIP Win-back Campaign"
+      - "Personalized Product Recommendations"
+      - "Priority Support Outreach"
+      IMP:
+      - "Win-back Campaign"
+      - "Personalized Product Recommendations"
+      High:
+      - "Win-back Campaign"
+      - "Personalized Product Recommendations"
+      Medium:
+      - "Automated Re-engagement Email"
+      Low:
+      - "Newsletter Reminder"
+    Disengaged Customer:
+      VIP:
+      - "VIP Exclusive Collection"
+      - "Personalized Recommendations"
+      - "Mobile Push Campaign"
+      IMP:
+      - "Personalized Recommendations"
+      - "Mobile Push Campaign"
+      High:
+      - "Product Discovery Campaign"
+      Medium:
+      - "Re-engagement Email"
+      Low:
+      - "Newsletter"
+    Frustrated Customer:
+      VIP:
+      - "Dedicated Customer Success Outreach"
+      - "Priority Support"
+      - "Returns Experience Review"
+      IMP:
+      - "Priority Support"
+      - "Service Recovery Campaign"
+      High:
+      - "Service Recovery Campaign"
+      Medium:
+      - "Customer Feedback Survey"
+      Low:
+      - "Feedback Request"
+    Price Sensitive Shopper:
+      VIP:
+      - "VIP Loyalty Rewards"
+      - "Exclusive Discount Access"
+      IMP:
+      - "Loyalty Rewards"
+      - "Targeted Coupon"
+      High:
+      - "Targeted Coupon"
+      Medium:
+      - "Promotional Campaign"
+      Low:
+      - "Sale Notification"
+
+app:
+  api_base: "http://localhost:8000"
+  brand_colors:
+  - "#c0785a"
+  - "#78a898"
+  - "#b0a898"
+  - "#6b6259"
+  - "#c4baae"

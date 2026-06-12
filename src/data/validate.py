@@ -8,10 +8,7 @@ import great_expectations as gx
 import great_expectations.expectations as gxe
 
 from src.utils import logger, exception
-from src.utils.common import get_project_root
-
-PROJECT_ROOT = get_project_root()
-CONFIG_PATH = PROJECT_ROOT / "config" / "production.yaml"
+from src.utils.config import CONFIG_PATH
 
 def _get_df_columns(df: pd.DataFrame) -> list[str]:
     """Load config, or save config with columns if not present. Return columns in df as list."""
@@ -30,9 +27,10 @@ def _get_df_columns(df: pd.DataFrame) -> list[str]:
     if not columns:
         columns = df.columns.to_list()
         CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        config.setdefault("raw_data", {})["columns"] = columns
         with CONFIG_PATH.open("w", encoding="utf-8") as prod:
             yaml.safe_dump(
-                {"raw_data": {"columns": columns}},
+                config,
                 prod,
                 default_flow_style=False,
                 sort_keys=False,

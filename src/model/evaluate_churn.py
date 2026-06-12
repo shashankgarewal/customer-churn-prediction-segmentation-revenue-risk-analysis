@@ -9,22 +9,8 @@ from sklearn.metrics import (
     precision_score, recall_score, f1_score, confusion_matrix
 )
 
-TARGET = 'Churned'
-RETENTION_RATES = {
-    "VIP":    0.85,
-    "IMP":    0.80,
-    "High":   0.75,
-    "Medium": 0.65,
-    "Low":    0.50,
-    "No_VALUE": 0.30,
-} # segment based retention rate
-THRESHOLDS = {
-    'VIP': [4400, 0.18],
-    'IMP': [2600, 0.2],
-    'High': [1800, 0.4],
-    'Medium': [800, 0.4],
-    'Low': [0, 0.55],
-}
+from src.utils.config import TARGET, RETENTION_RATES, THRESHOLDS
+
 
 def _assign_segment(ltv):
     if ltv >= THRESHOLDS['VIP'][0]: return 'VIP'

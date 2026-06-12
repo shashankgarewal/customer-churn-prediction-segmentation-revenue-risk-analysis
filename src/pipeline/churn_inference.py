@@ -13,9 +13,8 @@ from src.features.processor import process_features
 from src.utils.common import get_project_root
 from src.utils.logger import logging
 
-TARGET      = "Churned"
-MODEL_NAME  = "churn_model"
-ALIAS       = "best"
+from src.utils.config import TARGET, MODEL_NAME, ALIAS
+
 
 project_root = get_project_root()
 serving_path = project_root / "artifacts" / "serving_model"

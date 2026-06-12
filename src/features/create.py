@@ -2,11 +2,7 @@ import pandas as pd
 from src.utils import logger
 
 
-NEW_FEATURES = [
-    "Engagement_Score",
-    "Purchase_Frequency",
-    "LTV_Per_Purchase",
-]
+from src.utils.config import NEW_FEATURES
 
 
 def interaction_features(df: pd.DataFrame) -> pd.DataFrame:

@@ -15,9 +15,8 @@ ARTIFACT_PATH = PROJECT_ROOT / "artifacts"
 ARTIFACT_PATH.mkdir(parents=True, exist_ok=True)
 
 
-LOW_CARDINAL_COLS = ["Gender", "Signup_Quarter", "Country"]
-MID_CARDINAL_COLS = ["City"]
-TARGET = 'Churned'
+from src.utils.config import LOW_CARDINAL_COLS, MID_CARDINAL_COLS, TARGET
+
 
 
 class FrequencyEncoder(BaseEstimator, TransformerMixin):

@@ -3,11 +3,11 @@ from sklearn.model_selection import train_test_split
 
 from src.utils import logger
 from src.utils.common import get_project_root
+from src.utils.config import TRAIN_SIZE, TARGET, RANDOM_STATE
 
 PROJECT_ROOT = get_project_root()
 PREPROCESS_DATA_PATH = PROJECT_ROOT / "data" / "preprocess" 
-TRAIN_SIZE = 0.8
-TARGET = 'Churned'
+
 
 def prepare_dataset(df: pd.DataFrame):
     """Prepare the dataset for feature engineering"""
@@ -27,7 +27,7 @@ def prepare_dataset(df: pd.DataFrame):
         df, 
         train_size=TRAIN_SIZE, 
         stratify=df[TARGET],
-        random_state=42
+        random_state=RANDOM_STATE
         )
     
     # ---------------------------------- save train and test dataset --------------------------------- #

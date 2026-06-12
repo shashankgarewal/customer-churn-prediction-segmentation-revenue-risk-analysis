@@ -13,7 +13,8 @@ from src.utils.common import get_project_root
 from src.utils.logger import logging
 from src.model.evaluate_churn import track_model, _assign_segment, plot_segment_distributions
 
-RANDOM_STATE = 42 
+from src.utils.config import RANDOM_STATE
+
 
 
 # -------------------------------------- hyperparmeter setup ------------------------------------- #

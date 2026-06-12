@@ -2,7 +2,7 @@
 import shap
 import pandas as pd
 
-EXCLUDE_FROM_DRIVERS = ["Lifetime_Value"]
+from src.utils.config import EXCLUDE_FROM_DRIVERS
 
 def get_top_drivers(model, X: pd.DataFrame, top_n: int = 3) -> list[dict]:
     
