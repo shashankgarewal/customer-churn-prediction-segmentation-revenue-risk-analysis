@@ -103,10 +103,24 @@ def export_business_impact():
     df.to_csv(path, index=False)
     print(f"business_impact.csv saved ({len(df)} rows) -> {path}")
 
+def export_raw_test_data():
+    """Raw test split — no imputation, encoding, or feature engineering applied."""
+    raw_test_file = project_root / "data" / "preprocess" / "test.parquet"
+
+    if not raw_test_file.exists():
+        raise FileNotFoundError(f"Raw test parquet not found at {raw_test_file}")
+
+    df = pd.read_parquet(raw_test_file)
+    path = export_dir / "raw_test_data.csv"
+    df.to_csv(path, index=True, index_label="customer_index")
+    print(f"raw_test_data.csv saved ({len(df)} rows) → {path}")
+
+
 if __name__ == "__main__":
     export_dir.mkdir(parents=True, exist_ok=True)
     print(f"Starting Power BI data export to {export_dir}")
 
+    export_raw_test_data()
     export_prediction_output()
     export_retention_output()
     export_business_impact()
